@@ -49,7 +49,7 @@ const ProductCreate = () => {
 
     return (
         <div className="w-full min-h-screen bg-surface flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
-            <header className="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+            <header className="fixed top-0 inset-x-0 mobile-shell-width mx-auto z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
                 <div className="h-16 px-6 flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                         <button 

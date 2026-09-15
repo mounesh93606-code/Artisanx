@@ -53,7 +53,7 @@ export default function ConversationDetail() {
 
   return (
     <div className="w-full min-h-screen bg-surface flex flex-col pb-safe">
-      <header className="fixed top-0 w-full z-40 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe">
+      <header className="fixed top-0 inset-x-0 mobile-shell-width mx-auto z-40 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe">
         <div className="h-16 px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button 
@@ -67,7 +67,7 @@ export default function ConversationDetail() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pt-24 pb-24 w-full max-w-lg mx-auto flex flex-col gap-4 overflow-y-auto">
+      <main className="flex-1 px-4 pt-24 pb-28 w-full mobile-shell-width mx-auto flex flex-col gap-4 overflow-y-auto">
         {loading && messages.length === 0 ? (
           <div className="flex justify-center p-8"><span className="text-on-surface-variant font-medium">Loading messages...</span></div>
         ) : (
@@ -90,13 +90,13 @@ export default function ConversationDetail() {
         <div ref={messagesEndRef} />
       </main>
 
-      <div className="fixed bottom-0 w-full max-w-lg left-1/2 -translate-x-1/2 bg-surface border-t border-outline-variant/20 p-4 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+      <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto bg-surface border-t border-outline-variant/20 p-4 safe-area-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-40">
         <div className="flex items-end gap-2 bg-surface-container-lowest border border-outline rounded-3xl p-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-sm">
           <textarea 
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 bg-transparent border-none outline-none resize-none max-h-32 min-h-[44px] py-3 px-4 text-sm font-medium text-on-surface placeholder:text-outline"
+            className="flex-1 bg-transparent border-none outline-none resize-none max-h-32 min-h-[44px] py-3 px-4 text-base sm:text-sm font-medium text-on-surface placeholder:text-outline"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

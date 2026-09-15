@@ -205,18 +205,19 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
                             sendMessage();
                         }
                     }}
-                    className="flex-1 bg-surface-container rounded-xl px-3.5 py-2.5 text-sm border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary min-h-[42px] max-h-[120px] resize-none outline-none transition-all placeholder:text-stone-400 disabled:opacity-60 text-on-surface"
+                    className="flex-1 bg-surface-container rounded-xl px-3.5 py-2.5 text-base sm:text-sm border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary min-h-[44px] max-h-[120px] resize-none outline-none transition-all placeholder:text-stone-400 disabled:opacity-60 text-on-surface"
                 />
                 <button 
                     type="submit" 
                     disabled={!newMessage.trim() || isSending}
-                    className="w-10 h-10 bg-primary text-on-primary rounded-xl flex items-center justify-center disabled:opacity-40 hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-xl flex items-center justify-center disabled:opacity-40 hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm"
                     title="Send message"
+                    aria-label="Send message"
                 >
                     {isSending ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                        <Send className="w-4 h-4" />
+                        <Send className="w-5 h-5" />
                     )}
                 </button>
             </form>

@@ -86,17 +86,22 @@ export default function BuyerProductPage() {
     const isSaved = savedProducts.some(p => p.id === product.id);
 
     return (
-        <div className="w-full relative pb-24 bg-surface-container-lowest min-h-screen">
+        <div className="w-full relative pb-32 bg-surface-container-lowest min-h-screen">
             {/* Top Nav */}
-            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between">
-                <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm">
+            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between pt-safe">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm active:scale-95 transition-all"
+                    aria-label="Back"
+                >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="flex gap-2">
                     <div className="relative">
                         <button 
                             onClick={() => setShowShareMenu(!showShareMenu)}
-                            className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm transition-all"
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm transition-all active:scale-95"
+                            aria-label="Share"
                         >
                             <Share2 className="w-5 h-5 text-stone-600" />
                         </button>
@@ -277,8 +282,11 @@ export default function BuyerProductPage() {
                 )}
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 mobile-shell-width p-4 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex gap-3 z-20">
-                <button onClick={handleEnquiry} className="flex-1 py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all">
+            <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto p-4 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex gap-3 z-40 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+                <button 
+                    onClick={handleEnquiry} 
+                    className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                >
                     <Mail className="w-5 h-5" /> Request Enquiry
                 </button>
             </div>

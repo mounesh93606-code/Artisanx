@@ -21,7 +21,7 @@ export default function BuyerEnquiryDetail() {
     async function fetchEnquiry() {
       if (!id || !user || !token) return;
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/enquiries/${id}`, {
+        const res = await axios.get(`${API_URL}/enquiries/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
