@@ -13,11 +13,31 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
     const [newTag, setNewTag] = useState('');
     const [editingField, setEditingField] = useState<string | null>(null);
 
+    const handleManualEntry = () => {
+        setCatalogueData({
+            title: '',
+            description: voiceData?.translated_text || voiceData?.original_text || '',
+            category: '',
+            tags: [],
+            materials: [],
+            care_instructions: '',
+            estimated_production_time: '',
+            dimensions: '',
+            stock_quantity: '',
+            reserved_stock: 0,
+            is_made_to_order: false,
+            monthly_capacity: '',
+            low_stock_threshold: 5,
+            moq: '',
+            lead_time_days: ''
+        });
+    };
+
     const generateCatalogue = async () => {
         setIsLoading(true);
         try {
             const { data } = await api.post('/ai/generate-catalogue', {
-                transcript: voiceData?.translated_text || ''
+                transcript: voiceData?.translated_text || voiceData?.original_text || ''
             });
             setCatalogueData({
                 ...data,
@@ -26,7 +46,8 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                 lead_time_days: catalogueData?.lead_time_days ?? ''
             });
         } catch (error) {
-            console.error(error);
+            console.error("AI catalogue generation failed:", error);
+            handleManualEntry();
         } finally {
             setIsLoading(false);
         }
@@ -55,22 +76,32 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                     <Sparkles className="w-10 h-10 text-primary relative z-10" />
                 </div>
                 <h3 className="text-2xl font-bold text-on-surface mb-3">AI Catalog Formatter</h3>
-                <p className="text-on-surface-variant mb-8 max-w-[280px]">
+                <p className="text-on-surface-variant mb-6 max-w-[280px]">
                     We will use your spoken description to automatically generate buyer-ready details.
                 </p>
-                <Button 
-                    onClick={generateCatalogue}
-                    disabled={isLoading}
-                    fullWidth
-                >
-                    {isLoading ? (
-                        <span className="flex items-center gap-2">
-                            <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                            Formatting Details...
-                        </span>
-                    ) : "Generate Details"}
-                </Button>
-                <div className="mt-6">
+                <div className="w-full flex flex-col gap-3">
+                    <Button 
+                        onClick={generateCatalogue}
+                        disabled={isLoading}
+                        fullWidth
+                    >
+                        {isLoading ? (
+                            <span className="flex items-center gap-2">
+                                <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                                Formatting Details...
+                            </span>
+                        ) : "Generate Details"}
+                    </Button>
+                    <Button 
+                        variant="secondary"
+                        onClick={handleManualEntry}
+                        disabled={isLoading}
+                        fullWidth
+                    >
+                        Enter Details Manually
+                    </Button>
+                </div>
+                <div className="mt-4">
                     <Button variant="ghost" onClick={() => setStep(2)}>{t.back}</Button>
                 </div>
             </div>

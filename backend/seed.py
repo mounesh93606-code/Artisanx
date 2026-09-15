@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Add backend directory to sys.path to ensure modules can be imported
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import get_supabase_client, get_authenticated_client
+from database import get_supabase_client, get_authenticated_client, get_service_client
 from products.service import calculate_readiness
 from guidance.workflows import WORKFLOWS
 from supabase.client import Client
@@ -28,20 +28,28 @@ def ensure_users_exist(admin_client: Client):
         email = user_data["email"]
         try:
             # Try logging in
-            res = admin_client.auth.sign_in_with_password({"email": email, "password": PASSWORD})
+            res = get_supabase_client().auth.sign_in_with_password({"email": email, "password": PASSWORD})
             tokens[user_data["role"]] = {"token": res.session.access_token, "user": res.user}
             skipped += 1
         except Exception as e:
-            # User might not exist
+            # User might not exist, create via admin
             try:
-                res = admin_client.auth.sign_up({"email": email, "password": PASSWORD})
-                if res.user:
-                    admin_client.table("users").update({
-                        "role": user_data["role"],
-                        "display_name": user_data["name"]
-                    }).eq("id", res.user.id).execute()
-                    created += 1
-                    tokens[user_data["role"]] = {"token": res.session.access_token, "user": res.user}
+                user_res = admin_client.auth.admin.create_user({
+                    "email": email,
+                    "password": PASSWORD,
+                    "email_confirm": True
+                })
+                user_obj = user_res.user if hasattr(user_res, 'user') else user_res
+                admin_client.table("users").upsert({
+                    "id": user_obj.id,
+                    "email": email,
+                    "role": user_data["role"],
+                    "display_name": user_data["name"],
+                    "preferred_language": "en"
+                }).execute()
+                res = get_supabase_client().auth.sign_in_with_password({"email": email, "password": PASSWORD})
+                tokens[user_data["role"]] = {"token": res.session.access_token, "user": res.user}
+                created += 1
             except Exception as ex:
                 print(f"Error creating user {email}: {ex}")
     print_step(1, 5, f"Demo users: Created {created}, Skipped {skipped}")
@@ -270,7 +278,7 @@ def seed_buyer_enquiries(buyer_token_data, admin_client):
     print_step(5, 5, f"Buyer Enquiries: Inserted {inserted}, Skipped {skipped}")
 
 def seed():
-    admin_client = get_supabase_client()
+    admin_client = get_service_client()
     tokens = ensure_users_exist(admin_client)
     
     if "artisan" in tokens:

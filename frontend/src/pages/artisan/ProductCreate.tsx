@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useProductStore } from '../../stores/productStore';
@@ -11,10 +11,6 @@ import Step4Materials from '../../components/product/Step4Materials';
 import Step5Pricing from '../../components/product/Step5Pricing';
 import Step6Inventory from '../../components/product/Step6Inventory';
 import Step7Publish from '../../components/product/Step7Publish';
-import ShowMeFab from '../../components/guide-hand/ShowMeFab';
-import type { GuidanceWorkflow } from '../../types/guidance';
-import { useGuidanceStore } from '../../stores/guidanceStore';
-import api from '../../lib/api';
 
 const STEPS = [
   { id: 1, label: 'Photo' },
@@ -33,28 +29,6 @@ const ProductCreate = () => {
     const t = pcTranslations[lang] || pcTranslations['en'];
     const { currentStep, reset } = useProductStore();
     const isRTL = lang === 'ur';
-    const [fetchedWorkflow, setFetchedWorkflow] = useState<GuidanceWorkflow | null>(null);
-
-    useEffect(() => {
-        let mounted = true;
-        const fetchGuidance = async () => {
-            const { guidanceLevel, isActive, completedWorkflows, startWorkflow } = useGuidanceStore.getState();
-            if (guidanceLevel === 'off') return;
-            try {
-                const res = await api.get('/guidance/current?screen=product_create');
-                if (res.data && mounted) {
-                    setFetchedWorkflow(res.data);
-                    if (!isActive && !completedWorkflows.includes(res.data.id)) {
-                        startWorkflow(res.data);
-                    }
-                }
-            } catch (e) {
-                console.error("Guidance fetch error:", e);
-            }
-        };
-        fetchGuidance();
-        return () => { mounted = false; };
-    }, []);
 
     useEffect(() => {
         return () => reset();
@@ -136,10 +110,6 @@ const ProductCreate = () => {
                     </div>
                 </div>
             </main>
-            
-            {fetchedWorkflow && (
-                <ShowMeFab workflow={fetchedWorkflow} />
-            )}
         </div>
     );
 };

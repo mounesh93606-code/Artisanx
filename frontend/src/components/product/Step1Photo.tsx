@@ -270,7 +270,7 @@ const Step1Photo = ({ t }: { t: any }) => {
                                                 {photo.enhanced_quality_score}/10
                                             </span>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${getQualityBg(photo.enhanced_quality_score)}`}>
-                                                {getQualityLabel(photo.enhanced_quality_score)}
+                                                {t.qualityEnhanced || "Enhanced"}
                                             </span>
                                         </div>
                                     )}

@@ -84,7 +84,11 @@ def get_messages(id: str, current_user: dict = Depends(get_current_user), token:
         raise HTTPException(status_code=403, detail="Forbidden")
         
     res = client.table("messages").select("*, sender:users!sender_id(display_name)").eq("conversation_id", id).order("created_at", desc=False).execute()
-    return {"messages": res.data or []}
+    messages = []
+    for m in (res.data or []):
+        m["message"] = m.get("content") or ""
+        messages.append(m)
+    return {"messages": messages}
 
 @router.post("/{id}/messages")
 def send_message(id: str, req: MessageCreate, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
@@ -117,10 +121,14 @@ def send_message(id: str, req: MessageCreate, current_user: dict = Depends(get_c
         if conv["buyer_id"]:
             recipient_ids.append(conv["buyer_id"])
     
+    text = (req.content or req.message or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+
     msg_data = {
         "conversation_id": id,
         "sender_id": user_id,
-        "content": req.content
+        "content": text
     }
     m_res = client.table("messages").insert(msg_data).execute()
     
@@ -129,7 +137,7 @@ def send_message(id: str, req: MessageCreate, current_user: dict = Depends(get_c
     
     # Send notification
     product_title = conv.get("enquiry", {}).get("products", {}).get("title", "a product") if conv.get("enquiry") else "a support/dispute request"
-    preview = req.content[:50] + "..." if len(req.content) > 50 else req.content
+    preview = text[:50] + "..." if len(text) > 50 else text
     
     notif_type = "buyer_message" if role == "buyer" else "artisan_message" if role == "artisan" else "facilitator_message"
     
@@ -142,7 +150,9 @@ def send_message(id: str, req: MessageCreate, current_user: dict = Depends(get_c
             metadata={"conversation_id": id, "enquiry_id": conv.get("enquiry_id"), "preview": preview}
         )
     
-    return {"status": "success", "message": m_res.data[0]}
+    out_msg = m_res.data[0]
+    out_msg["message"] = out_msg.get("content") or ""
+    return {"status": "success", "message": out_msg}
 
 @router.put("/{id}/read")
 def mark_read(id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):

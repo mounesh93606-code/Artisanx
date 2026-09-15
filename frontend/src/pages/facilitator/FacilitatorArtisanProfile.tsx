@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { ArrowLeft, MapPin, CheckCircle, Clock, ShieldAlert, Package, Star, MoreHorizontal, MessageSquare, X } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Clock, Package, Star, MoreHorizontal, MessageSquare, X } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function FacilitatorArtisanProfile() {
   const { id } = useParams<{id: string}>();
-  const { t } = useTranslation();
   const { token } = useAuthStore();
   const navigate = useNavigate();
   

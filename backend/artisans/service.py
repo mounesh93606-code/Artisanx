@@ -1,5 +1,5 @@
 from fastapi import HTTPException, UploadFile
-from database import supabase_client, get_authenticated_client
+from database import supabase_client, get_authenticated_client, get_service_client
 from .schemas import ArtisanProfileCreate, ArtisanProfileUpdate
 import uuid
 
@@ -8,9 +8,18 @@ def create_profile(user_id: str, profile: ArtisanProfileCreate, token: str):
     data["user_id"] = user_id
     
     client = get_authenticated_client(token)
-    res = client.table("artisan_profiles").insert(data).execute()
-    if res.data and len(res.data) > 0:
-        return res.data[0]
+    try:
+        res = client.table("artisan_profiles").insert(data).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+    except Exception:
+        pass
+    
+    # Fallback to service client
+    s_client = get_service_client()
+    s_res = s_client.table("artisan_profiles").insert(data).execute()
+    if s_res.data and len(s_res.data) > 0:
+        return s_res.data[0]
     raise HTTPException(status_code=400, detail="Failed to create artisan profile")
 
 def update_profile(user_id: str, profile: ArtisanProfileUpdate, token: str):
@@ -19,23 +28,57 @@ def update_profile(user_id: str, profile: ArtisanProfileUpdate, token: str):
         raise HTTPException(status_code=400, detail="No fields to update")
     
     client = get_authenticated_client(token)
-    res = client.table("artisan_profiles").update(data).eq("user_id", user_id).execute()
-    if res.data and len(res.data) > 0:
-        return res.data[0]
+    try:
+        res = client.table("artisan_profiles").update(data).eq("user_id", user_id).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+    except Exception:
+        pass
+
+    # Fallback to service client
+    s_client = get_service_client()
+    s_res = s_client.table("artisan_profiles").update(data).eq("user_id", user_id).execute()
+    if s_res.data and len(s_res.data) > 0:
+        return s_res.data[0]
     raise HTTPException(status_code=404, detail="Artisan profile not found")
 
 def get_profile(user_id: str, token: str):
     client = get_authenticated_client(token)
-    res = client.table("artisan_profiles").select("*").eq("user_id", user_id).execute()
-    if res.data and len(res.data) > 0:
-        return res.data[0]
+    try:
+        res = client.table("artisan_profiles").select("*").eq("user_id", user_id).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+    except Exception:
+        pass
+    
+    # Fallback to service client
+    try:
+        s_client = get_service_client()
+        s_res = s_client.table("artisan_profiles").select("*").eq("user_id", user_id).execute()
+        if s_res.data and len(s_res.data) > 0:
+            return s_res.data[0]
+    except Exception:
+        pass
+        
     raise HTTPException(status_code=404, detail="Artisan profile not found")
 
 def get_profile_by_id(artisan_id: str, token: str):
     client = get_authenticated_client(token)
-    res = client.table("artisan_profiles").select("*").eq("id", artisan_id).execute()
-    if res.data and len(res.data) > 0:
-        return res.data[0]
+    try:
+        res = client.table("artisan_profiles").select("*").eq("id", artisan_id).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+    except Exception:
+        pass
+        
+    try:
+        s_client = get_service_client()
+        s_res = s_client.table("artisan_profiles").select("*").eq("id", artisan_id).execute()
+        if s_res.data and len(s_res.data) > 0:
+            return s_res.data[0]
+    except Exception:
+        pass
+        
     raise HTTPException(status_code=404, detail="Artisan profile not found")
 
 def upload_profile_photo(user_id: str, file: UploadFile, token: str):

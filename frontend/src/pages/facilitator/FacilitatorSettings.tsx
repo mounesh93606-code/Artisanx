@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { ArrowLeft, Save, Camera, Check, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
@@ -31,7 +30,6 @@ interface FacilitatorSettingsProps {
 }
 
 export default function FacilitatorSettings({ onBack }: FacilitatorSettingsProps) {
-  const { t } = useTranslation();
   const { user, updateProfile } = useAuthStore();
   
   const [formData, setFormData] = useState({

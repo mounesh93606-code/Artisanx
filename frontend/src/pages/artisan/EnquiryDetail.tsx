@@ -5,6 +5,7 @@ import { ArrowLeft, MessageSquare, Check, X, Search, Calendar, FileText } from '
 import axios from 'axios';
 import { useAuthStore } from '../../stores/authStore';
 import { useQuotationStore } from '../../stores/quotationStore';
+import MessagingUI from '../../components/buyer/MessagingUI';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -14,7 +15,7 @@ export default function EnquiryDetail() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const { createQuotation, sendQuotation } = useQuotationStore();
   
   const [enq, setEnq] = useState<any>(null);
@@ -36,6 +37,11 @@ export default function EnquiryDetail() {
   });
 
   const handleMessageBuyer = async () => {
+    const el = document.getElementById('artisan-enquiry-conversation');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
     setMessaging(true);
     try {
       const res = await axios.get(`${API_URL}/conversations/by-enquiry/${id}`, {
@@ -122,7 +128,7 @@ export default function EnquiryDetail() {
   const displayResponse = isResponded ? enq.artisan_response : responseType;
 
   return (
-    <div className="min-h-screen bg-surface-container-lowest pb-24 text-on-surface">
+    <div className="min-h-screen bg-surface-container-lowest pb-28 text-on-surface">
       {/* Header */}
       <div className="bg-surface px-4 pt-12 pb-4 sticky top-0 z-10 border-b border-outline-variant/30">
         <div className="flex items-center gap-3">
@@ -425,6 +431,11 @@ export default function EnquiryDetail() {
             </button>
           </div>
         )}
+        
+        {/* Conversation Section */}
+        <div id="artisan-enquiry-conversation" className="mt-6">
+          <MessagingUI enquiryId={id || ""} currentUserId={user?.id || enq.artisan_id || ""} />
+        </div>
 
       </div>
     </div>

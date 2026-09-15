@@ -41,7 +41,7 @@ export default function ConversationDetail() {
     if (!content.trim()) return;
     setSending(true);
     try {
-      await api.post(`/conversations/${id}/messages`, { content: content.trim() });
+      await api.post(`/conversations/${id}/messages`, { content: content.trim(), message: content.trim() });
       setContent('');
       await fetchMessages();
     } catch (e) {
@@ -78,7 +78,7 @@ export default function ConversationDetail() {
                 <div className={`px-4 py-2.5 rounded-2xl shadow-sm ${
                   isMe ? 'bg-primary text-on-primary rounded-br-sm' : 'bg-surface-container-high text-on-surface rounded-bl-sm'
                 }`}>
-                  <p className="text-[15px] leading-relaxed break-words">{msg.content}</p>
+                  <p className="text-[15px] leading-relaxed break-words">{msg.content || msg.message}</p>
                 </div>
                 <span className="text-[10px] font-semibold text-on-surface-variant mt-1 px-1">
                   {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}

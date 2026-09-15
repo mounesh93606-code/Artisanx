@@ -67,7 +67,7 @@ export default function BuyerEnquiryDetail() {
   const image = product?.images?.[0]?.image_url;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
       <div className="flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="flex items-center text-on-surface-variant hover:text-primary transition-colors">
           <ArrowLeft className="w-5 h-5 mr-2" />
@@ -87,7 +87,7 @@ export default function BuyerEnquiryDetail() {
             {t('buyer_enquiry.product_section', 'Product')}
           </h2>
           <button 
-            onClick={() => navigate(`/product/${enquiry.product_id}`)}
+            onClick={() => navigate(`/buyer/product/${enquiry.product_id}`)}
             className="flex items-center text-sm text-primary hover:text-primary/80 font-medium"
           >
             {t('buyer_enquiry.view_product', 'View Product')}
@@ -224,7 +224,7 @@ export default function BuyerEnquiryDetail() {
       </div>
 
       <div className="mt-8">
-          <MessagingUI enquiryId={id || ""} currentUserId={enquiry.buyer_id || ""} />
+          <MessagingUI enquiryId={id || ""} currentUserId={user?.id || enquiry.buyer_id || ""} />
       </div>
     </div>
   );

@@ -27,6 +27,30 @@ def get_product(product_id: str, artisan_id: str, auth_client: Any):
         product["review_status"] = rev.get("review_status")
         product["review_notes"] = rev.get("notes")
         product["review_flags"] = rev.get("flags")
+
+    # Attach all images
+    img_res = auth_client.table("product_images").select("*").eq("product_id", product_id).order("sort_order").execute()
+    images = img_res.data or []
+    product["images"] = images
+    main_img = next((img.get("image_url") for img in images if img.get("is_main") and img.get("image_url")), None)
+    if not main_img and images:
+        main_img = images[0].get("image_url")
+    product["main_image"] = main_img
+
+    # Attach artisan profile info
+    prof_res = auth_client.table("artisan_profiles").select("*").eq("user_id", artisan_id).execute()
+    if prof_res.data:
+        prof = prof_res.data[0]
+        product["artisan_name"] = prof.get("artisan_name")
+        product["business_name"] = prof.get("business_name")
+        product["location"] = prof.get("location")
+        product["craft_story"] = prof.get("craft_story")
+        product["craft_type"] = prof.get("craft_type")
+
+    # Attach passport if available
+    passport_res = auth_client.table("product_passports").select("*").eq("product_id", product_id).execute()
+    if passport_res.data:
+        product["passport"] = passport_res.data[0]
         
     return product
 
@@ -222,17 +246,23 @@ def publish_product(product_id: str, artisan_id: str, auth_client: Any):
     res = auth_client.table("products").update({"status": "published"}).eq("id", product_id).execute()
     
     if res.data and len(res.data) > 0:
-        from passports.service import generate_passport
-        generate_passport(product_id, auth_client, artisan_id)
+        try:
+            from passports.service import generate_passport
+            generate_passport(product_id, auth_client, artisan_id)
+        except Exception as e:
+            print(f"Warning: generate_passport failed during publish: {e}")
         
-        from notifications.service import create_notification
-        create_notification(
-            user_id=artisan_id,
-            type="product_published",
-            title="Product published successfully",
-            message="Your product is now live on the platform.",
-            metadata={"product_id": product_id}
-        )
+        try:
+            from notifications.service import create_notification
+            create_notification(
+                user_id=artisan_id,
+                type="product_published",
+                title="Product published successfully",
+                message="Your product is now live on the platform.",
+                metadata={"product_id": product_id}
+            )
+        except Exception as e:
+            print(f"Warning: create_notification failed: {e}")
         
         return {"status": "published", "message": "Product published successfully"}
         
@@ -255,13 +285,14 @@ def get_catalogue(
     page: int = 1,
     per_page: int = 20
 ):
-    from database import supabase_client
+    from database import get_service_client
+    service_client = get_service_client()
     
-    query = supabase_client.table("products").select("id, title, price, category, created_at, moq, lead_time_days, stock_quantity, is_made_to_order, materials, artisan_id").eq("status", "published")
+    query = service_client.table("products").select("id, title, price, category, created_at, moq, lead_time_days, stock_quantity, is_made_to_order, materials, artisan_id").eq("status", "published")
     
     if search:
         query = query.ilike("title", f"%{search}%")
-    if category:
+    if category and category.lower() != "all":
         query = query.eq("category", category)
     if min_price is not None:
         query = query.gte("price", min_price)
@@ -285,41 +316,33 @@ def get_catalogue(
     product_ids = [p["id"] for p in products]
     artisan_ids = list(set([p["artisan_id"] for p in products if p.get("artisan_id")]))
     
-    # Fetch artisan_profiles for state filtering
-    profiles_res = supabase_client.table("artisan_profiles").select("user_id, state").in_("user_id", artisan_ids).execute()
+    # Fetch artisan_profiles for artisan name, state, and location
+    profiles_res = service_client.table("artisan_profiles").select("user_id, state, artisan_name, location, craft_type").in_("user_id", artisan_ids).execute()
     profiles_map = {pr["user_id"]: pr for pr in (profiles_res.data or [])}
     
-    # Fetch product_passports to get artisan info and images (since artisan_profiles and product_images lack anon grants)
-    passports_res = supabase_client.table("product_passports").select("product_id, passport_data").in_("product_id", product_ids).execute()
-    passports_map = {}
-    for pp in (passports_res.data or []):
-        data = pp.get("passport_data") or {}
-        
-        main_img = None
-        images = data.get("images", [])
-        for img in images:
-            if img.get("is_main"):
-                main_img = img.get("image_url")
-                break
-        if not main_img and images:
-            main_img = images[0].get("image_url")
-            
-        passports_map[pp["product_id"]] = {
-            "artisan_name": data.get("artisan_name"),
-            "location": data.get("craft_location"),
-            "main_image": main_img
-        }
+    # Fetch product_images directly to get actual uploaded images
+    images_res = service_client.table("product_images").select("product_id, image_url, is_main, sort_order").in_("product_id", product_ids).order("sort_order").execute()
+    images_map = {}
+    for img in (images_res.data or []):
+        pid = img["product_id"]
+        # Prefer main image or first available image
+        if pid not in images_map or img.get("is_main"):
+            images_map[pid] = img.get("image_url")
     
-    # Client-side filter for passport fields
+    # Client-side filters
     filtered = []
     for p in products:
-        a = passports_map.get(p["id"], {})
+        artisan_profile = profiles_map.get(p.get("artisan_id"), {})
+        artisan_name = artisan_profile.get("artisan_name")
+        prod_location = artisan_profile.get("location")
+        prod_state = artisan_profile.get("state")
+        prod_craft = p.get("category") or artisan_profile.get("craft_type")
         
-        # We don't have craft_type in passport data, so we map category if craft_type is requested
-        # Or we just skip filtering if it's missing
-        if craft_type and p.get("category") != craft_type: # Fallback to category for craft_type
+        if craft_type and craft_type.lower() not in (prod_craft or "").lower():
             continue
-        if location and location.lower() not in (a.get("location") or "").lower():
+        if location and location.lower() not in (prod_location or "").lower():
+            continue
+        if state and state.lower() != (prod_state or "").lower():
             continue
             
         # Check material
@@ -330,23 +353,17 @@ def get_catalogue(
             if material.lower() not in mat_names:
                 continue
 
-        # Check state
-        if state:
-            artisan_profile = profiles_map.get(p.get("artisan_id"), {})
-            p_state = artisan_profile.get("state") or ""
-            if state.lower() != p_state.lower():
-                continue
-
         filtered.append({
             "id": p["id"],
             "title": p.get("title"),
-            "main_image": a.get("main_image"),
+            "main_image": images_map.get(p["id"]),
             "price": p.get("price"),
             "artisan_id": p.get("artisan_id"),
-            "artisan_name": a.get("artisan_name"),
-            "location": a.get("location"),
-            "state": profiles_map.get(p.get("artisan_id"), {}).get("state"),
-            "craft_type": p.get("category"), # Fallback
+            "artisan_name": artisan_name,
+            "location": prod_location,
+            "state": prod_state,
+            "craft_type": prod_craft,
+            "category": p.get("category"),
             "moq": p.get("moq"),
             "lead_time_days": p.get("lead_time_days"),
             "stock_quantity": p.get("stock_quantity"),
@@ -380,16 +397,38 @@ def get_catalogue(
     }
 
 def get_catalogue_detail(product_id: str):
-    from database import supabase_client
+    from database import get_service_client
     from fastapi import HTTPException
     
-    res = supabase_client.table("products").select("*").eq("id", product_id).eq("status", "published").execute()
+    service_client = get_service_client()
+    
+    res = service_client.table("products").select("*").eq("id", product_id).eq("status", "published").execute()
     if not res.data or len(res.data) == 0:
         raise HTTPException(status_code=404, detail="Published product not found")
         
     product = res.data[0]
     
-    # Passport (Contains Artisan Info and Images since they are protected)
+    # Fetch all uploaded images for this product
+    images_res = service_client.table("product_images").select("*").eq("product_id", product_id).order("sort_order").execute()
+    images = images_res.data or []
+    
+    # Fetch artisan profile
+    artisan_id = product.get("artisan_id")
+    artisan = {}
+    if artisan_id:
+        art_res = service_client.table("artisan_profiles").select("*").eq("user_id", artisan_id).execute()
+        if art_res.data:
+            prof = art_res.data[0]
+            artisan = {
+                "id": artisan_id,
+                "artisan_name": prof.get("artisan_name"),
+                "location": prof.get("location"),
+                "craft_story": prof.get("craft_story"),
+                "craft_type": prof.get("craft_type") or product.get("category"),
+                "profile_photo_url": prof.get("profile_photo_url")
+            }
+            
+    # Fetch passport if available
     from passports.service import get_passport
     passport_data = None
     try:
@@ -397,18 +436,16 @@ def get_catalogue_detail(product_id: str):
     except Exception:
         pass
         
-    artisan = {}
-    images = []
     if passport_data and passport_data.get("passport_data"):
-        data = passport_data["passport_data"]
-        artisan = {
-            "id": product.get("artisan_id"),
-            "artisan_name": data.get("artisan_name"),
-            "location": data.get("craft_location"),
-            "craft_story": data.get("artisan_story"),
-            "craft_type": product.get("category") # Fallback
-        }
-        images = data.get("images", [])
+        pd = passport_data["passport_data"]
+        if not artisan.get("artisan_name") and pd.get("artisan_name"):
+            artisan["artisan_name"] = pd.get("artisan_name")
+        if not artisan.get("location") and pd.get("craft_location"):
+            artisan["location"] = pd.get("craft_location")
+        if not artisan.get("craft_story") and pd.get("artisan_story"):
+            artisan["craft_story"] = pd.get("artisan_story")
+        if not images and pd.get("images"):
+            images = pd.get("images")
         
     # Strip private info from product
     product.pop("min_safe_price", None)

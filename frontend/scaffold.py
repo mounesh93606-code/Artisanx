@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 
-base = Path(r"c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src")
+base = Path(r"c:\Users\moune\art\frontend\src")
 
 folders = [
     "lib", "stores", "types", "hooks",

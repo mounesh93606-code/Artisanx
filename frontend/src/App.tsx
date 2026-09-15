@@ -7,6 +7,7 @@ import ArtisanHome from './pages/artisan/ArtisanHome';
 import ProfileSetup from './pages/artisan/ProfileSetup';
 import ProductCreate from './pages/artisan/ProductCreate';
 import ProductList from './pages/artisan/ProductList';
+import ProductDetail from './pages/artisan/ProductDetail';
 import ProductEdit from './pages/artisan/ProductEdit';
 import PublicProductPage from './pages/PublicProductPage';
 import SplashPage from './pages/SplashPage';
@@ -46,7 +47,6 @@ import ArtisanDirectory from './pages/facilitator/ArtisanDirectory';
 import ProductReviewQueue from './pages/facilitator/ProductReviewQueue';
 import FacilitatorProfile from './pages/facilitator/FacilitatorProfile';
 import NotificationsHub from './pages/facilitator/NotificationsHub';
-import GuideHandOverlay from './components/guide-hand/GuideHandOverlay';
 import { useTranslation } from 'react-i18next';
 import { AuthLayout } from './components/layout/AuthLayout';
 import { ArtisanLayout } from './components/layout/ArtisanLayout';
@@ -83,7 +83,6 @@ function App() {
 
   return (
     <BrowserRouter>
-      <GuideHandOverlay />
       <Routes>
         
         {/* Auth Routes */}
@@ -96,7 +95,9 @@ function App() {
           <Route index element={<ArtisanHome />} />
           <Route path="setup" element={<ProfileSetup />} />
           <Route path="products" element={<ProductList />} />
+          <Route path="products/:id" element={<ProductDetail />} />
           <Route path="product/create" element={<ProductCreate />} />
+          <Route path="products/new" element={<ProductCreate />} />
           <Route path="products/:id/edit" element={<ProductEdit />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="enquiries" element={<EnquiryList />} />

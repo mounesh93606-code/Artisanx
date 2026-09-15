@@ -68,6 +68,17 @@ class ProductResponse(BaseModel):
     low_stock_threshold: Optional[int] = None
     moq: Optional[int] = None
     lead_time_days: Optional[int] = None
+    customisation_available: Optional[bool] = None
+    review_status: Optional[str] = None
+    review_notes: Optional[str] = None
+    review_flags: Optional[List[str]] = None
+    images: Optional[List[Any]] = None
+    artisan_name: Optional[str] = None
+    business_name: Optional[str] = None
+    location: Optional[str] = None
+    craft_story: Optional[str] = None
+    craft_type: Optional[str] = None
+    passport: Optional[Any] = None
 
 class MissingField(BaseModel):
     field: str
@@ -87,7 +98,13 @@ class CatalogueItem(BaseModel):
     artisan_id: Optional[str] = None
     artisan_name: Optional[str] = None
     location: Optional[str] = None
+    state: Optional[str] = None
     craft_type: Optional[str] = None
+    category: Optional[str] = None
+    moq: Optional[int] = None
+    lead_time_days: Optional[int] = None
+    stock_quantity: Optional[int] = None
+    is_made_to_order: Optional[bool] = None
 
 class CatalogueResponse(BaseModel):
     items: List[CatalogueItem]
@@ -111,6 +128,8 @@ class CatalogueProductResponse(BaseModel):
     stock_quantity: Optional[int] = None
     moq: Optional[int] = None
     lead_time_days: Optional[int] = None
+    is_made_to_order: Optional[bool] = None
+    customisation_available: Optional[bool] = None
 
 class CatalogueDetailResponse(BaseModel):
     product: CatalogueProductResponse

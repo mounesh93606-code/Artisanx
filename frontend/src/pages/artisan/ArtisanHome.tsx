@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import BottomNav from '../../components/BottomNav';
-import ShowMeFab from '../../components/guide-hand/ShowMeFab';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
-import { useGuidanceStore } from '../../stores/guidanceStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import api from '../../lib/api';
 
@@ -13,38 +11,18 @@ export default function ArtisanHome() {
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState<any>(null);
-  const [fetchedWorkflow, setFetchedWorkflow] = useState<any>(null);
   
   const { metrics, loading, fetchMetrics } = useDashboardStore();
-
-  useEffect(() => {
-    let mounted = true;
-    const fetchGuidance = async () => {
-      const { guidanceLevel, isActive, completedWorkflows, startWorkflow } = useGuidanceStore.getState();
-      if (guidanceLevel === 'off') return;
-      try {
-        const res = await api.get('/guidance/current?screen=artisan_home');
-        if (res.data && mounted) {
-          setFetchedWorkflow(res.data);
-          if (!isActive && !completedWorkflows.includes(res.data.id)) {
-            startWorkflow(res.data);
-          }
-        }
-      } catch (e) {
-        console.error("Guidance fetch error:", e);
-      }
-    };
-    fetchGuidance();
-    return () => { mounted = false; };
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await api.get('/artisans/me');
         setProfile(res.data);
-      } catch (err) {
-        console.error("Profile fetch error:", err);
+      } catch (err: any) {
+        if (err.response?.status !== 404) {
+          console.error("Profile fetch error:", err);
+        }
       }
     };
     fetchProfile();
@@ -246,10 +224,6 @@ export default function ArtisanHome() {
         </section>
 
       </main>
-      
-      {fetchedWorkflow && (
-        <ShowMeFab workflow={fetchedWorkflow} />
-      )}
 
       <BottomNav />
     </div>

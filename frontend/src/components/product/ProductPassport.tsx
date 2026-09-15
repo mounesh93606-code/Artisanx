@@ -28,9 +28,11 @@ interface Props {
   passportData: PassportData;
   qrCodeUrl: string;
   shareableUrl: string;
+  onEnquire?: () => void;
+  isArtisanView?: boolean;
 }
 
-export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl }: Props) {
+export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl, onEnquire, isArtisanView = false }: Props) {
   const { t } = useTranslation();
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [shareSuccess, setShareSuccess] = useState(false);
@@ -103,14 +105,19 @@ export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl 
           <p className="text-xl font-medium text-primary mt-2">₹{passportData.price.toFixed(2)}</p>
           
           <div className="flex gap-3 mt-4">
-            <button onClick={handleShare} className="flex-1 bg-surface-container hover:bg-surface-container-high text-on-surface py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors">
+            <button onClick={handleShare} className={`${!isArtisanView && onEnquire ? 'flex-1' : 'w-full'} bg-surface-container hover:bg-surface-container-high text-on-surface py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors`}>
               <Share2 size={18} />
               {shareSuccess ? t('passport.copied', 'Copied!') : t('passport.share', 'Share')}
             </button>
-            <button className="flex-1 bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors shadow-md">
-              <MessageCircle size={18} />
-              {t('passport.enquire', 'Send Enquiry')}
-            </button>
+            {!isArtisanView && onEnquire && (
+              <button 
+                onClick={onEnquire}
+                className="flex-1 bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors shadow-md active:scale-95"
+              >
+                <MessageCircle size={18} />
+                {t('passport.enquire', 'Send Enquiry')}
+              </button>
+            )}
           </div>
         </div>
       </div>

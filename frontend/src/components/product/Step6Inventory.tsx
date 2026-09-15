@@ -22,7 +22,7 @@ const Step6Inventory = ({ t }: { t: any }) => {
     }, [draftId]);
 
     const handleDataChange = (field: string, val: any) => {
-        setCatalogueData({ [field]: val });
+        setCatalogueData({ ...(catalogueData || {}), [field]: val });
     };
 
     const addVariant = () => {

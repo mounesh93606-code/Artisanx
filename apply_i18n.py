@@ -1,7 +1,7 @@
 import os
 import re
 
-frontend_dir = r"c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src"
+frontend_dir = r"c:\Users\moune\art\frontend\src"
 
 replacements = [
     # Auth

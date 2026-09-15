@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
-import { ArrowLeft, Search, Filter, ShieldCheck, Clock, FileText, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Filter, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ArtisanDirectory() {

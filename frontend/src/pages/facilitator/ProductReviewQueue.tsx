@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
 import { ArrowLeft, Search, Filter, ChevronRight, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProductReviewQueue() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

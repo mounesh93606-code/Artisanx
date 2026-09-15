@@ -1,40 +1,38 @@
 Traceback (most recent call last):
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
     yield
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
     resp = self._pool.handle_request(req)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
     raise exc from None
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
     response = connection.handle_request(
         pool_request.request
     )
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\connection.py", line 103, in handle_request
+    return self._connection.handle_request(request)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\http11.py", line 136, in handle_request
     raise exc
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
-    stream = self._connect(request)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_sync\connection.py", line 156, in _connect
-    stream = stream.start_tls(**kwargs)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_backends\sync.py", line 154, in start_tls
-    with map_exceptions(exc_map):
-         ~~~~~~~~~~~~~~^^^^^^^^^
-  File "C:\Users\YOGI\anaconda3\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\http11.py", line 106, in handle_request
+    ) = self._receive_response_headers(**kwargs)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\http11.py", line 177, in _receive_response_headers
+    event = self._receive_event(timeout=timeout)
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpcore\_sync\http11.py", line 231, in _receive_event
+    raise RemoteProtocolError(msg)
+httpcore.RemoteProtocolError: Server disconnected without sending a response.
 
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "C:\Users\YOGI\OneDrive\Desktop\artisanx\backend\dashboard\router.py", line 20, in get_artisan_dashboard
+  File "C:\Users\moune\art\backend\dashboard\router.py", line 20, in get_artisan_dashboard
     prod_res = client.table("products").select("status").eq("artisan_id", artisan_id).execute()
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\postgrest\_sync\request_builder.py", line 90, in execute
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\postgrest\_sync\request_builder.py", line 90, in execute
     r = send_with_retry(self.request)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\postgrest\_sync\request_builder.py", line 51, in send_with_retry
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\postgrest\_sync\request_builder.py", line 51, in send_with_retry
     resp = req.send(headers)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\postgrest\base_request_builder.py", line 90, in send
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\postgrest\base_request_builder.py", line 90, in send
     return self.session.request(
            ~~~~~~~~~~~~~~~~~~~~^
         self.http_method,
@@ -44,31 +42,31 @@ Traceback (most recent call last):
         ^^^^^^^^^^^^^^^
     )
     ^
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_client.py", line 825, in request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_client.py", line 825, in request
     return self.send(request, auth=auth, follow_redirects=follow_redirects)
            ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_client.py", line 914, in send
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_client.py", line 914, in send
     response = self._send_handling_auth(
         request,
     ...<2 lines>...
         history=[],
     )
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
     response = self._send_handling_redirects(
         request,
         follow_redirects=follow_redirects,
         history=history,
     )
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
     response = self._send_single_request(request)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
     response = transport.handle_request(request)
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
     with map_httpcore_exceptions():
          ~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\YOGI\anaconda3\Lib\contextlib.py", line 162, in __exit__
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
     self.gen.throw(value)
     ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\YOGI\anaconda3\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+  File "C:\Users\moune\AppData\Local\Programs\Python\Python313\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
     raise mapped_exc(message) from exc
-httpx.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+httpx.RemoteProtocolError: Server disconnected without sending a response.

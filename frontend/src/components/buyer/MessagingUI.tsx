@@ -8,101 +8,172 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 interface Message {
     id: string;
     sender_id: string;
-    message: string;
+    content?: string;
+    message?: string;
     created_at: string;
 }
 
 export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: string, currentUserId: string }) {
-    const { token } = useAuthStore();
+    const { token, user } = useAuthStore();
+    const effectiveUserId = currentUserId || user?.id || '';
     const [messages, setMessages] = useState<Message[]>([]);
+    const [conversationId, setConversationId] = useState<string | null>(null);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isSending, setIsSending] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        async function fetchMessages() {
+        let isMounted = true;
+
+        async function fetchMessages(silently = false) {
+            if (!enquiryId || !token) {
+                if (!silently && isMounted) setLoading(false);
+                return;
+            }
             try {
-                // Fetch the conversation by enquiry_id
-                // Our backend might need to get conversation ID first
-                const convRes = await axios.get(`${API_URL}/conversations/`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                // Find the conversation for this enquiry
-                const conv = convRes.data.conversations.find((c: any) => c.enquiry_id === enquiryId);
-                
-                if (conv) {
-                    const msgRes = await axios.get(`${API_URL}/conversations/${conv.id}/messages`, {
+                // Fetch or initialize conversation by enquiry_id directly
+                let targetConvId = conversationId;
+                if (!targetConvId) {
+                    try {
+                        const convRes = await axios.get(`${API_URL}/conversations/by-enquiry/${enquiryId}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        targetConvId = convRes.data.conversation?.id;
+                    } catch (e) {
+                        // Fallback to searching conversation list
+                        const listRes = await axios.get(`${API_URL}/conversations/`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const found = listRes.data.conversations?.find((c: any) => c.enquiry_id === enquiryId);
+                        targetConvId = found?.id;
+                    }
+                }
+
+                if (targetConvId && isMounted) {
+                    setConversationId(targetConvId);
+                    const msgRes = await axios.get(`${API_URL}/conversations/${targetConvId}/messages`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
-                    setMessages(msgRes.data.messages || []);
+                    if (isMounted) {
+                        setMessages(msgRes.data.messages || []);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load messages", err);
             } finally {
-                setLoading(false);
+                if (!silently && isMounted) {
+                    setLoading(false);
+                }
             }
         }
         
-        if (enquiryId) fetchMessages();
-    }, [enquiryId, token]);
+        fetchMessages(false);
+        const pollInterval = setInterval(() => {
+            fetchMessages(true);
+        }, 5000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(pollInterval);
+        };
+    }, [enquiryId, token, conversationId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const sendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim()) return;
+    const sendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const trimmed = newMessage.trim();
+        if (!trimmed || isSending || !token) return;
+
+        setIsSending(true);
+        setSendError(null);
 
         try {
-            // Check if conversation exists
-            let convRes = await axios.get(`${API_URL}/conversations/`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            let conv = convRes.data.conversations.find((c: any) => c.enquiry_id === enquiryId);
-            
-            // Send message
-            if (conv) {
-                const res = await axios.post(`${API_URL}/conversations/${conv.id}/messages`, {
-                    message: newMessage
-                }, {
+            let targetConvId = conversationId;
+            if (!targetConvId) {
+                const convRes = await axios.get(`${API_URL}/conversations/by-enquiry/${enquiryId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setMessages([...messages, res.data.message]);
-                setNewMessage("");
+                targetConvId = convRes.data.conversation?.id;
+                if (targetConvId) setConversationId(targetConvId);
             }
-        } catch (err) {
+
+            if (!targetConvId) {
+                throw new Error("Unable to establish conversation for this enquiry.");
+            }
+
+            const res = await axios.post(`${API_URL}/conversations/${targetConvId}/messages`, {
+                content: trimmed,
+                message: trimmed
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const savedMessage = res.data.message;
+            setMessages(prev => [...prev, savedMessage]);
+            setNewMessage("");
+        } catch (err: any) {
             console.error("Failed to send message", err);
+            setSendError(err.response?.data?.detail || "Failed to send message. Please try again.");
+        } finally {
+            setIsSending(false);
         }
     };
 
     return (
-        <div className="bg-surface rounded-2xl flex flex-col h-[500px] shadow-sm border border-outline-variant overflow-hidden">
-            <div className="bg-surface-container-high px-4 py-3 flex items-center gap-2 border-b border-outline-variant">
-                <MessageCircle className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-on-surface">Conversation</h3>
+        <div className="bg-surface rounded-2xl flex flex-col h-[480px] sm:h-[520px] shadow-sm border border-outline-variant overflow-hidden">
+            {/* Card Header */}
+            <div className="bg-surface-container-high px-4 py-3 flex items-center justify-between border-b border-outline-variant shrink-0">
+                <div className="flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                    <h3 className="font-bold text-on-surface">Conversation</h3>
+                </div>
+                {messages.length > 0 && (
+                    <span className="text-xs text-stone-500 font-medium">
+                        {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+                    </span>
+                )}
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50">
+            {/* Messages Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/60">
                 {loading ? (
-                    <div className="flex justify-center"><div className="animate-pulse w-6 h-6 bg-stone-300 rounded-full"></div></div>
+                    <div className="h-full flex items-center justify-center">
+                        <div className="animate-pulse flex items-center gap-2 text-stone-400 text-sm">
+                            <div className="w-4 h-4 bg-stone-300 rounded-full animate-bounce"></div>
+                            <span>Loading conversation...</span>
+                        </div>
+                    </div>
                 ) : messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-stone-400">
-                        <MessageCircle className="w-10 h-10 mb-2 opacity-20" />
-                        <p className="text-sm">No messages yet.</p>
+                    <div className="h-full flex flex-col items-center justify-center text-stone-400 p-6 text-center">
+                        <MessageCircle className="w-12 h-12 mb-2 opacity-25 text-primary" />
+                        <p className="text-sm font-medium text-stone-600">No messages yet</p>
+                        <p className="text-xs text-stone-400 mt-1 max-w-xs">
+                            Start the conversation by typing your message below.
+                        </p>
                     </div>
                 ) : (
                     messages.map((msg) => {
-                        const isMe = msg.sender_id === currentUserId;
+                        const isMe = msg.sender_id === effectiveUserId;
+                        const text = msg.content || msg.message || "";
                         return (
                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
-                                    isMe ? 'bg-primary text-on-primary rounded-tr-none' : 'bg-surface text-on-surface border border-outline-variant rounded-tl-none'
+                                <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-xs ${
+                                    isMe 
+                                        ? 'bg-primary text-on-primary rounded-tr-none' 
+                                        : 'bg-surface text-on-surface border border-outline-variant rounded-tl-none'
                                 }`}>
-                                    <div className="break-words">{msg.message}</div>
-                                    <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-primary-container/80' : 'text-stone-400'}`}>
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    <div className="break-words whitespace-pre-wrap leading-relaxed">
+                                        {text || <span className="italic opacity-60">(Empty message)</span>}
+                                    </div>
+                                    <div className={`text-[10px] mt-1 text-right font-medium ${
+                                        isMe ? 'text-on-primary/80' : 'text-stone-400'
+                                    }`}>
+                                        {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                     </div>
                                 </div>
                             </div>
@@ -112,20 +183,41 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={sendMessage} className="p-3 bg-surface border-t border-outline-variant flex gap-2 items-end">
+            {/* Error banner if send failed */}
+            {sendError && (
+                <div className="px-4 py-2 bg-red-50 text-red-700 text-xs border-t border-red-200 flex items-center justify-between">
+                    <span>{sendError}</span>
+                    <button onClick={() => setSendError(null)} className="text-red-900 font-bold ml-2 hover:opacity-75">✕</button>
+                </div>
+            )}
+
+            {/* Message Composer Form */}
+            <form onSubmit={sendMessage} className="p-3 bg-surface border-t border-outline-variant flex gap-2 items-end shrink-0">
                 <textarea 
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-surface-container rounded-xl px-3 py-2 text-sm border-none focus:ring-1 focus:ring-primary min-h-[40px] max-h-[100px] resize-none"
+                    placeholder="Type here..."
                     rows={1}
+                    disabled={isSending}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }}
+                    className="flex-1 bg-surface-container rounded-xl px-3.5 py-2.5 text-sm border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary min-h-[42px] max-h-[120px] resize-none outline-none transition-all placeholder:text-stone-400 disabled:opacity-60 text-on-surface"
                 />
                 <button 
                     type="submit" 
-                    disabled={!newMessage.trim()}
-                    className="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
+                    disabled={!newMessage.trim() || isSending}
+                    className="w-10 h-10 bg-primary text-on-primary rounded-xl flex items-center justify-center disabled:opacity-40 hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm"
+                    title="Send message"
                 >
-                    <Send className="w-4 h-4" />
+                    {isSending ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <Send className="w-4 h-4" />
+                    )}
                 </button>
             </form>
         </div>

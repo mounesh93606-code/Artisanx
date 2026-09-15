@@ -69,7 +69,7 @@ def process_file(filepath):
         print(f"Updated {filepath}")
 
 if __name__ == '__main__':
-    base_dir = r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src'
+    base_dir = r'c:\Users\moune\art\frontend\src'
     for root, dirs, files in os.walk(base_dir):
         for file in files:
             if file.endswith('.tsx') or file.endswith('.ts'):

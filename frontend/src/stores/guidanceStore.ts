@@ -34,26 +34,14 @@ export const useGuidanceStore = create<GuidanceState>()(
       currentWorkflow: null,
       currentStepIndex: 0,
       status: 'idle',
-      guidanceLevel: 'full',
+      guidanceLevel: 'off',
       completedWorkflows: [],
 
-      setGuidanceLevel: (level) => set({ guidanceLevel: level }),
+      setGuidanceLevel: (_level) => set({ guidanceLevel: 'off' }),
 
-      startWorkflow: (workflow) => {
-        const { completedWorkflows, guidanceLevel } = get();
-        if (guidanceLevel === 'off' || completedWorkflows.includes(workflow.id)) {
-            return; // Don't start if off or already marked "dont show again"
-        }
-        
-        // Sort steps by step_order just in case
-        const sortedSteps = [...(workflow.steps || [])].sort((a, b) => a.step_order - b.step_order);
-        
-        set({
-            isActive: true,
-            currentWorkflow: { ...workflow, steps: sortedSteps },
-            currentStepIndex: 0,
-            status: 'active'
-        });
+      startWorkflow: (_workflow) => {
+        // Disabled - Step Guide / Onboarding Tour popup completely removed
+        return;
       },
 
       nextStep: () => {

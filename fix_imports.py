@@ -1,6 +1,6 @@
 import os
 import glob
-files = glob.glob(r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\guide-hand\*.tsx')
+files = glob.glob(r'c:\Users\moune\art\frontend\src\components\guide-hand\*.tsx')
 for path in files:
     with open(path, 'r', encoding='utf-8') as f:
         lines = f.readlines()

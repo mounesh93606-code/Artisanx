@@ -267,7 +267,12 @@ export default function BuyerProductPage() {
                 {passport && (
                     <div className="mt-8">
                         <h3 className="font-bold text-stone-800 text-lg mb-4">Product Passport</h3>
-                        <ProductPassport passportData={passport.passport_data} qrCodeUrl={passport.qr_code_url} shareableUrl={passport.shareable_url} />
+                        <ProductPassport 
+                            passportData={passport.passport_data} 
+                            qrCodeUrl={passport.qr_code_url} 
+                            shareableUrl={passport.shareable_url} 
+                            onEnquire={handleEnquiry}
+                        />
                     </div>
                 )}
             </div>

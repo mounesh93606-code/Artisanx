@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Users, AlertTriangle, Package, MessageSquare, Star, Clock, ShieldAlert, ChevronRight, Bell, Menu } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function FacilitatorHome() {
-  const { t } = useTranslation();
   const { token, user } = useAuthStore();
   const navigate = useNavigate();
   

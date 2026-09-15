@@ -76,7 +76,15 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
     voiceData: null,
     setVoiceData: (voiceData) => set({ voiceData }),
     catalogueData: null,
-    setCatalogueData: (catalogueData) => set({ catalogueData }),
+    setCatalogueData: (catalogueData) => set((state) => {
+        const incoming = typeof catalogueData === 'function' ? catalogueData(state.catalogueData) : catalogueData;
+        if (!incoming) return { catalogueData: null };
+        return {
+            catalogueData: state.catalogueData
+                ? { ...state.catalogueData, ...incoming }
+                : incoming
+        };
+    }),
     materialsData: [],
     setMaterialsData: (materialsData) => set({ materialsData }),
     pricingData: {

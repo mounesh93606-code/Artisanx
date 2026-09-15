@@ -26,7 +26,7 @@ export default function SavedProductsPage() {
             {savedProducts.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {savedProducts.map((product) => (
-                        <div key={product.id} className="bg-surface rounded-2xl shadow-sm border border-outline-variant overflow-hidden group cursor-pointer" onClick={() => navigate(`/product/${product.id}`)}>
+                        <div key={product.id} className="bg-surface rounded-2xl shadow-sm border border-outline-variant overflow-hidden group cursor-pointer" onClick={() => navigate(`/buyer/product/${product.id}`)}>
                             <div className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
                                 {product.image_url ? (
                                     <img src={product.image_url} alt={product.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />

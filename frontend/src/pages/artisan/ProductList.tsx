@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit2, Trash2, ArrowLeft, Copy } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft, Copy, Eye } from 'lucide-react';
 import api from '../../lib/api';
 import BottomNav from '../../components/BottomNav';
 
@@ -23,70 +23,68 @@ export default function ProductList() {
       const statusParam = tab === 'all' ? '' : `?status=${tab}`;
       const { data } = await api.get(`/products/my${statusParam}`);
       setProducts(data);
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDuplicate = async (id: string) => {
     try {
-      await api.delete(`/products/${id}`);
-      setDeleteId(null);
+      await api.post(`/products/${id}/duplicate`);
       fetchProducts();
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleDuplicate = async (id: string) => {
+  const handleDelete = async (id?: string) => {
+    const targetId = id || deleteId;
+    if (!targetId) return;
     try {
-      setLoading(true);
-      await api.post(`/products/${id}/duplicate`);
+      await api.delete(`/products/${targetId}`);
+      setDeleteId(null);
       fetchProducts();
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
+    } catch (e) {
+      console.error(e);
     }
   };
 
   return (
-    <div className="w-full relative pb-24 font-sans text-on-surface bg-surface-container-lowest">
-      {/* Header */}
-      <div className="bg-surface px-6 pt-10 pb-4 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center space-x-4">
-          <button onClick={() => navigate('/artisan')} className="p-2 -ml-2 rounded-full hover:bg-stone-100">
-            <ArrowLeft size={24} className="text-on-surface" />
-          </button>
-          <h1 className="text-xl font-bold">{t('common.products')}</h1>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex mt-6 space-x-6 border-b border-stone-200">
-          <button 
-            onClick={() => setTab('all')}
-            className={`pb-3 font-bold text-sm ${tab === 'all' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'}`}
-          >
-            {t('products.all')}
-          </button>
-          <button 
-            onClick={() => setTab('published')}
-            className={`pb-3 font-bold text-sm ${tab === 'published' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'}`}
-          >
-            {t('products.published')}
-          </button>
-          <button 
-            onClick={() => setTab('draft')}
-            className={`pb-3 font-bold text-sm ${tab === 'draft' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'}`}
-          >
-            {t('products.drafts')}
-          </button>
-        </div>
+    <div className="w-full pb-20 relative bg-brand-bg min-h-screen">
+      {/* Top Bar */}
+      <div className="bg-surface px-6 py-4 border-b border-outline-variant flex items-center justify-between sticky top-0 z-10">
+        <button onClick={() => navigate('/artisan')} className="p-2 -ml-2 text-stone-600 hover:text-stone-900">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="font-bold text-lg">{t('products.title')}</h1>
+        <div className="w-8" />
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-outline-variant bg-surface px-6">
+        <button 
+          className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${tab === 'all' ? 'border-primary text-primary' : 'border-transparent text-stone-500'}`}
+          onClick={() => setTab('all')}
+        >
+          {t('products.all')} ({products.length})
+        </button>
+        <button 
+          className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${tab === 'published' ? 'border-primary text-primary' : 'border-transparent text-stone-500'}`}
+          onClick={() => setTab('published')}
+        >
+          {t('products.published')}
+        </button>
+        <button 
+          className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${tab === 'draft' ? 'border-primary text-primary' : 'border-transparent text-stone-500'}`}
+          onClick={() => setTab('draft')}
+        >
+          {t('products.drafts')}
+        </button>
+      </div>
 
-      {/* Product List */}
+      {/* List */}
       <div className="p-6 space-y-4 w-full">
         {loading ? (
           <div className="text-center py-10 text-stone-500">{t('common.loading')}</div>
@@ -101,15 +99,20 @@ export default function ProductList() {
           products.map(product => (
             <div 
               key={product.id} 
-              className="bg-surface rounded-2xl p-4 shadow-sm border border-outline-variant flex gap-4 items-center relative overflow-hidden group cursor-pointer"
-              onClick={() => navigate(`/artisan/products/${product.id}/edit`)}
+              className="bg-surface rounded-2xl p-4 shadow-sm border border-outline-variant flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => navigate(`/artisan/products/${product.id}`)}
             >
               {/* Thumbnail */}
               <div className="w-20 h-20 rounded-xl bg-stone-100 flex-shrink-0 overflow-hidden">
                 {product.main_image ? (
-                  <img src={product.main_image} alt={product.title} className="w-full h-full object-cover" />
+                  <img 
+                    src={product.main_image} 
+                    alt={product.title} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-stone-300">{t('common.no_image')}</div>
+                  <div className="w-full h-full flex items-center justify-center text-stone-300 text-xs text-center p-1">{t('common.no_image')}</div>
                 )}
               </div>
 
@@ -124,39 +127,67 @@ export default function ProductList() {
                 <p className="text-xs text-stone-500 mb-2 truncate">{product.category || 'No category'}</p>
                 <div className="flex justify-between items-center">
                   <p className="font-bold text-sm">
-                    {product.price ? `₹${product.price}` : <span className="text-stone-400 font-normal">{t('products.no_price_set')}</span>}
+                    {product.price ? `₹${Number(product.price).toLocaleString()}` : <span className="text-stone-400 font-normal">{t('products.no_price_set')}</span>}
                   </p>
                 </div>
                 
-                {/* Readiness Score Bar */}
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 bg-stone-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${product.readiness_score >= 100 ? 'bg-green-500' : product.readiness_score > 50 ? 'bg-amber-400' : 'bg-red-400'}`} 
-                      style={{ width: `${Math.min(product.readiness_score || 0, 100)}%` }}
-                    />
+                {/* Readiness Score Bar & Quick Actions */}
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 bg-stone-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${product.readiness_score >= 100 ? 'bg-green-500' : product.readiness_score > 50 ? 'bg-amber-400' : 'bg-red-400'}`} 
+                        style={{ width: `${Math.min(product.readiness_score || 0, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-stone-400">{product.readiness_score || 0}%</span>
                   </div>
-                  <span className="text-[10px] font-bold text-stone-400">{product.readiness_score || 0}%</span>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/artisan/products/${product.id}`); }}
+                      className="text-[11px] font-bold text-primary hover:underline px-1 py-0.5 rounded"
+                    >
+                      View
+                    </button>
+                    <span className="text-stone-300">|</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/artisan/products/${product.id}/edit`); }}
+                      className="text-[11px] font-bold text-stone-600 hover:underline px-1 py-0.5 rounded"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Actions Overlay (visible on hover or focus for desktop, swipe for mobile is abstracted here as standard buttons for simplicity) */}
-              <div className="absolute top-0 right-0 h-full bg-white/90 p-2 flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-full group-hover:translate-x-0 backdrop-blur-sm border-l border-stone-100">
+              {/* Actions Overlay */}
+              <div className="absolute top-0 right-0 h-full bg-white/95 p-2 flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-full group-hover:translate-x-0 backdrop-blur-sm border-l border-stone-100 z-10">
                 <button 
+                  title="View Product Details"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/artisan/products/${product.id}`); }}
+                  className="p-2 bg-stone-100 rounded-full text-brand-dark hover:bg-stone-200 transition-colors"
+                >
+                  <Eye size={16} />
+                </button>
+                <button 
+                  title="Edit Product"
                   onClick={(e) => { e.stopPropagation(); navigate(`/artisan/products/${product.id}/edit`); }}
-                  className="p-2 bg-stone-100 rounded-full text-brand-dark hover:bg-stone-200"
+                  className="p-2 bg-stone-100 rounded-full text-brand-dark hover:bg-stone-200 transition-colors"
                 >
                   <Edit2 size={16} />
                 </button>
                 <button 
+                  title="Duplicate Product"
                   onClick={(e) => { e.stopPropagation(); handleDuplicate(product.id); }}
-                  className="p-2 bg-stone-100 rounded-full text-secondary hover:bg-stone-200"
+                  className="p-2 bg-stone-100 rounded-full text-secondary hover:bg-stone-200 transition-colors"
                 >
                   <Copy size={16} />
                 </button>
                 <button 
+                  title="Delete Product"
                   onClick={(e) => { e.stopPropagation(); setDeleteId(product.id); }}
-                  className="p-2 bg-red-50 rounded-full text-red-600 hover:bg-red-100"
+                  className="p-2 bg-red-50 rounded-full text-red-600 hover:bg-red-100 transition-colors"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -190,7 +221,7 @@ export default function ProductList() {
                 {t('common.cancel')}
               </button>
               <button 
-                onClick={() => handleDelete(deleteId)}
+                onClick={() => handleDelete()}
                 className="flex-1 py-4 font-bold text-white bg-error rounded-2xl"
               >
                 {t('products.delete_confirm')}

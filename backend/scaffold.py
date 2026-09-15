@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-base = Path(r"c:\Users\YOGI\OneDrive\Desktop\artisanx\backend")
+base = Path(r"c:\Users\moune\art\backend")
 
 folders = [
     "auth", "artisans", "products", "images", "voice", "ai", "ai_catalogue",

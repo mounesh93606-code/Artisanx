@@ -9,21 +9,26 @@ router = APIRouter(prefix="/enquiries", tags=["enquiries"])
 
 @router.post("/")
 def route_create_enquiry(req: EnquiryCreate, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)) -> dict:
-    client = get_authenticated_client(token)
+    from database import get_service_client
+    service_client = get_service_client()
     
-    if current_user.get("role") != "buyer":
+    user_role = current_user.get("role")
+    if user_role and user_role != "buyer":
         raise HTTPException(status_code=403, detail="Unauthorized: Only buyers can send enquiries")
     buyer_id = current_user["id"]
     
-    # Get product to find artisan_id
-    product_res = client.table("products").select("artisan_id, title").eq("id", req.product_id).execute()
+    # Get product to find the specific artisan who created it
+    product_res = service_client.table("products").select("artisan_id, title").eq("id", req.product_id).execute()
     if not product_res.data:
         raise HTTPException(status_code=404, detail="Product not found")
         
-    artisan_id = product_res.data[0]["artisan_id"]
-    product_title = product_res.data[0]["title"]
+    artisan_id = product_res.data[0].get("artisan_id")
+    if not artisan_id:
+        raise HTTPException(status_code=400, detail="Product has no assigned artisan")
+        
+    product_title = product_res.data[0].get("title", "Product")
     
-    # Insert enquiry
+    # Insert enquiry assigned to that specific artisan
     enq_data = {
         "product_id": req.product_id,
         "buyer_id": buyer_id,
@@ -37,20 +42,23 @@ def route_create_enquiry(req: EnquiryCreate, current_user: dict = Depends(get_cu
         "status": "new"
     }
     
-    enq_res = client.table("buyer_enquiries").insert(enq_data).execute()
+    enq_res = service_client.table("buyer_enquiries").insert(enq_data).execute()
     if not enq_res.data:
         raise HTTPException(status_code=500, detail="Failed to create enquiry")
         
     enquiry_id = enq_res.data[0]["id"]
     
-    # Insert notification for artisan
-    create_notification(
-        user_id=artisan_id,
-        type="enquiry_new",
-        title="New enquiry received",
-        message=f"You have a new enquiry for {product_title}.",
-        metadata={"enquiry_id": enquiry_id, "product_id": req.product_id}
-    )
+    # Insert notification for that specific artisan
+    try:
+        create_notification(
+            user_id=artisan_id,
+            type="enquiry_new",
+            title="New enquiry received",
+            message=f"You have a new enquiry for {product_title}.",
+            metadata={"enquiry_id": enquiry_id, "product_id": req.product_id}
+        )
+    except Exception as e:
+        print(f"Warning: Failed to create notification for artisan {artisan_id}: {e}")
     
     return {"status": "success", "enquiry_id": enquiry_id}
 

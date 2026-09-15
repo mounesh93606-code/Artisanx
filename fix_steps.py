@@ -2,12 +2,12 @@ import os
 import re
 
 files = [
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step1Photo.tsx',
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step2Voice.tsx',
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step3ReviewAI.tsx',
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step4Materials.tsx',
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step5Pricing.tsx',
-    r'c:\Users\YOGI\OneDrive\Desktop\artisanx\frontend\src\components\product\Step6Publish.tsx'
+    r'c:\Users\moune\art\frontend\src\components\product\Step1Photo.tsx',
+    r'c:\Users\moune\art\frontend\src\components\product\Step2Voice.tsx',
+    r'c:\Users\moune\art\frontend\src\components\product\Step3ReviewAI.tsx',
+    r'c:\Users\moune\art\frontend\src\components\product\Step4Materials.tsx',
+    r'c:\Users\moune\art\frontend\src\components\product\Step5Pricing.tsx',
+    r'c:\Users\moune\art\frontend\src\components\product\Step6Publish.tsx'
 ]
 
 for path in files:

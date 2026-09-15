@@ -41,7 +41,7 @@ def seed_guidance_workflows(user: dict = Depends(get_current_user)):
             # but since step IDs aren't in WORKFLOWS dict, we'll fetch existing by workflow_id and step_order
             existing_step = client.table("guidance_steps").select("id").eq("workflow_id", workflow["id"]).eq("step_order", step["step_order"]).maybe_single().execute()
             
-            if existing_step.data:
+            if existing_step and existing_step.data:
                 client.table("guidance_steps").update(step_data).eq("id", existing_step.data["id"]).execute()
             else:
                 client.table("guidance_steps").insert(step_data).execute()
@@ -52,14 +52,14 @@ def seed_guidance_workflows(user: dict = Depends(get_current_user)):
 def get_workflow(workflow_id: str, user: dict = Depends(get_current_user)):
     client = get_service_client()
     wf_res = client.table("guidance_workflows").select("*").eq("id", workflow_id).maybe_single().execute()
-    if not wf_res.data:
+    if not wf_res or not wf_res.data:
         raise HTTPException(status_code=404, detail="Workflow not found")
         
     steps_res = client.table("guidance_steps").select("*").eq("workflow_id", workflow_id).order("step_order").execute()
     
     workflow_data = dict(wf_res.data)
     workflow_data["name"] = workflow_data.get("workflow_key", "")
-    workflow_data["steps"] = steps_res.data
+    workflow_data["steps"] = steps_res.data if steps_res and steps_res.data else []
     
     return workflow_data
 
@@ -74,10 +74,10 @@ def get_current_guidance(screen: str = Query(...), user: dict = Depends(get_curr
     wf_res = client.table("guidance_workflows").select("*").eq("id", workflow_id).maybe_single().execute()
     steps_res = client.table("guidance_steps").select("*").eq("workflow_id", workflow_id).order("step_order").execute()
     
-    if wf_res.data:
+    if wf_res and wf_res.data:
         workflow_data = dict(wf_res.data)
         workflow_data["name"] = workflow_data.get("workflow_key", "")
-        workflow_data["steps"] = steps_res.data
+        workflow_data["steps"] = steps_res.data if steps_res and steps_res.data else []
         return {"workflow": workflow_data}
     return {"workflow": None}
 
@@ -144,7 +144,7 @@ def get_progress(user: dict = Depends(get_current_user)):
 
 @router.put("/settings")
 def update_settings(req: GuidanceSettingsRequest, user: dict = Depends(get_current_user)):
-    client = get_supabase_client()
+    client = get_service_client()
     update_data = {}
     if req.guidance_level is not None:
         # Guidance level might be stored on the user profile or in user_guidance_progress globally?
