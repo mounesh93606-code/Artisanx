@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from auth.router import router as auth_router
@@ -43,9 +44,18 @@ def _new_async_client_init(self, *args, **kwargs):
         kwargs['timeout'] = httpx.Timeout(30.0)
     _original_async_client_init(self, *args, **kwargs)
 httpx.AsyncClient.__init__ = _new_async_client_init
+cors_env = os.environ.get("CORS_ORIGINS", "")
+custom_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost",
+    "capacitor://localhost",
+    "https://localhost",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=default_origins + custom_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

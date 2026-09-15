@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export interface Notification {
     id: string;
     type: string;
@@ -21,7 +23,7 @@ export function useNotifications() {
         if (!isAuthenticated || !token) return;
         
         try {
-            const res = await fetch('http://localhost:8000/notifications', {
+            const res = await fetch(`${API_URL}/notifications`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -37,7 +39,7 @@ export function useNotifications() {
         if (!isAuthenticated || !token) return;
         
         try {
-            const res = await fetch('http://localhost:8000/notifications/unread-count', {
+            const res = await fetch(`${API_URL}/notifications/unread-count`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -52,7 +54,7 @@ export function useNotifications() {
     const markAsRead = async (id: string) => {
         if (!token) return;
         try {
-            const res = await fetch(`http://localhost:8000/notifications/${id}/read`, {
+            const res = await fetch(`${API_URL}/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -68,7 +70,7 @@ export function useNotifications() {
     const markAllAsRead = async () => {
         if (!token) return;
         try {
-            const res = await fetch('http://localhost:8000/notifications/read-all', {
+            const res = await fetch(`${API_URL}/notifications/read-all`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
