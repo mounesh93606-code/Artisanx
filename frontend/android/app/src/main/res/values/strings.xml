@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ArtisanX</string>
+    <string name="title_activity_main">ArtisanX</string>
+    <string name="package_name">com.artisanx.app</string>
+    <string name="custom_url_scheme">com.artisanx.app</string>
+</resources>
