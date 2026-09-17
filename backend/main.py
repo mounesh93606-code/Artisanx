@@ -112,6 +112,16 @@ app.include_router(support_requests_router)
 app.include_router(disputes_router)
 from fastapi.responses import PlainTextResponse
 
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "ArtisanX Backend API",
+        "version": "v1.2-opencv-studio",
+        "frontend": "https://artisanx-frontend.vercel.app",
+        "docs": "/docs"
+    }
+
 @app.get("/health")
 @app.head("/health")
 def health_check() -> dict:
