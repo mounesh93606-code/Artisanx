@@ -110,6 +110,14 @@ app.include_router(reviews_router)
 app.include_router(buyer_router)
 app.include_router(support_requests_router)
 app.include_router(disputes_router)
+from fastapi.responses import PlainTextResponse
+
 @app.get("/health")
+@app.head("/health")
 def health_check() -> dict:
     return {"status": "ok", "version": "v1.2-opencv-studio"}
+
+@app.get("/ping", response_class=PlainTextResponse)
+@app.head("/ping")
+def ping() -> str:
+    return "ok"
