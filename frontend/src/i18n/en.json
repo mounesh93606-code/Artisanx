@@ -419,5 +419,13 @@
     "stop_listening": "Stop",
     "help_text": "You can ask questions about pricing, catalogue creation, or orders.",
     "error_listening": "Could not recognize audio. Please try again or type."
+  },
+  "enquiry_detail": {
+    "create_quote": "Create Quotation",
+    "message_buyer": "Message Buyer",
+    "send_quote": "Send Quotation",
+    "cancel": "Cancel",
+    "opening": "Opening...",
+    "sending": "Sending..."
   }
 }

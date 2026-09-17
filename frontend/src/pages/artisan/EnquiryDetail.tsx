@@ -248,21 +248,21 @@ export default function EnquiryDetail() {
 
         {/* Quote Form */}
         {isResponded && enq.artisan_response === 'interested' && enq.status === 'responded' && !showQuoteForm && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button 
+              onClick={() => setShowQuoteForm(true)}
+              className="w-full sm:flex-1 min-h-[48px] bg-primary hover:bg-primary/90 text-on-primary font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-center text-sm sm:text-base active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-[20px]">request_quote</span>
+              <span>{t('enquiry_detail.create_quote', { defaultValue: 'Create Quotation' })}</span>
+            </button>
             <button 
               onClick={handleMessageBuyer}
               disabled={messaging}
-              className="flex-1 bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container font-bold py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full sm:flex-1 min-h-[48px] bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-center text-sm sm:text-base active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[20px]">chat</span>
-              {messaging ? 'Opening...' : 'Message Buyer'}
-            </button>
-            <button 
-              onClick={() => setShowQuoteForm(true)}
-              className="flex-1 bg-primary hover:bg-primary-container text-on-primary font-bold py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[20px]">request_quote</span>
-              {t('enquiry_detail.create_quote') || 'Create Quotation'}
+              <span>{messaging ? t('enquiry_detail.opening', { defaultValue: 'Opening...' }) : t('enquiry_detail.message_buyer', { defaultValue: 'Message Buyer' })}</span>
             </button>
           </div>
         )}
@@ -335,19 +335,19 @@ export default function EnquiryDetail() {
               </div>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button 
                 onClick={() => setShowQuoteForm(false)}
-                className="flex-1 py-3 border border-outline-variant text-stone-700 font-bold rounded-xl"
+                className="w-full sm:flex-1 min-h-[48px] py-3 border border-outline-variant text-stone-700 font-bold rounded-xl active:scale-[0.98]"
               >
-                Cancel
+                {t('enquiry_detail.cancel', { defaultValue: 'Cancel' })}
               </button>
               <button 
                 onClick={handleCreateQuote}
                 disabled={submitting || quoteData.quantity <= 0 || quoteData.unit_price <= 0}
-                className="flex-[2] py-3 bg-primary text-on-primary font-bold rounded-xl disabled:opacity-50"
+                className="w-full sm:flex-[2] min-h-[48px] py-3 bg-primary text-on-primary font-bold rounded-xl disabled:opacity-50 active:scale-[0.98]"
               >
-                {submitting ? 'Sending...' : 'Send Quotation'}
+                {submitting ? t('enquiry_detail.sending', { defaultValue: 'Sending...' }) : t('enquiry_detail.send_quote', { defaultValue: 'Send Quotation' })}
               </button>
             </div>
           </div>
