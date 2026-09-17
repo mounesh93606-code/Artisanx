@@ -342,8 +342,9 @@ export default function GuideHandOverlay() {
   const handleNextClick = () => {
     setWarningMsg(null);
 
-    // If on Dashboard, navigate to create page
-    if (!isArtisanCreateRoute && location.pathname === '/artisan') {
+    // If not in the product creation wizard yet, immediately navigate to create page!
+    if (!isArtisanCreateRoute) {
+      setProductStep(1);
       navigate('/artisan/product/create');
       return;
     }
@@ -439,10 +440,18 @@ export default function GuideHandOverlay() {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
-      {/* Target Highlight Outline (Clicks pass straight through!) */}
+      {/* Target Highlight Outline */}
       {targetRect && (
         <div
-          className="absolute pointer-events-none transition-all duration-300 rounded-2xl"
+          onClick={() => {
+            if (activeStep?.targetId === 'add-product') {
+              setProductStep(1);
+              navigate('/artisan/product/create');
+            }
+          }}
+          className={`absolute transition-all duration-300 rounded-2xl ${
+            activeStep?.targetId === 'add-product' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'
+          }`}
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
@@ -453,7 +462,7 @@ export default function GuideHandOverlay() {
             zIndex: 99990
           }}
         >
-          <span className="absolute -top-2 -right-2 flex h-4 w-4">
+          <span className="absolute -top-2 -right-2 flex h-4 w-4 pointer-events-none">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
           </span>
@@ -463,6 +472,12 @@ export default function GuideHandOverlay() {
       {/* Animated Pointing Hand */}
       {targetRect && (
         <motion.div
+          onClick={() => {
+            if (activeStep?.targetId === 'add-product') {
+              setProductStep(1);
+              navigate('/artisan/product/create');
+            }
+          }}
           animate={
             handPos.direction === 'up'
               ? { y: [0, -10, 0], scale: [1, 1.08, 1] }
@@ -475,7 +490,9 @@ export default function GuideHandOverlay() {
             duration: 1.2,
             ease: 'easeInOut'
           }}
-          className="absolute pointer-events-none z-[99995] drop-shadow-[0_6px_16px_rgba(217,119,6,0.6)]"
+          className={`absolute z-[99995] drop-shadow-[0_6px_16px_rgba(217,119,6,0.6)] ${
+            activeStep?.targetId === 'add-product' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'
+          }`}
           style={{
             left: handPos.x,
             top: handPos.y
@@ -567,7 +584,11 @@ export default function GuideHandOverlay() {
               onClick={handleNextClick}
               className="px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md flex items-center gap-1 transition-all active:scale-95 ml-auto"
             >
-              {isArtisanCreateRoute && currentProductStep === 7 ? (
+              {!isArtisanCreateRoute ? (
+                <>
+                  Start Add Product <ChevronRight size={14} />
+                </>
+              ) : currentProductStep === 7 ? (
                 <>
                   <Check size={14} /> Done
                 </>
