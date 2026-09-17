@@ -62,9 +62,9 @@ export default function BuyerProfile() {
                     <div className="p-4">
                         <h2 className="font-bold text-stone-800 mb-4">Settings</h2>
                         
-                        <Link to="/language" className="flex items-center justify-between p-3 bg-stone-50 rounded-xl mb-3 hover:bg-stone-100 transition-colors">
+                        <Link to="/language" state={{ from: '/buyer/profile' }} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl mb-3 hover:bg-stone-100 transition-colors">
                             <div className="flex items-center gap-3 font-medium text-stone-700">
-                                <Settings className="w-5 h-5 text-stone-500" /> Language Preferences
+                                <Settings className="w-5 h-5 text-stone-500" /> {t('app.choose_language', { defaultValue: 'Language Preferences' })}
                             </div>
                             <ChevronRight className="w-4 h-4 text-stone-400" />
                         </Link>
