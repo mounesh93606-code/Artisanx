@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 
@@ -76,6 +78,40 @@ const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, 
   return <>{children}</>;
 };
 
+const BackButtonHandler: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listenerHandle: any = null;
+
+    const setupListener = async () => {
+      listenerHandle = await CapApp.addListener('backButton', () => {
+        const rootPaths = ['/login', '/artisan', '/buyer', '/facilitator', '/', '/splash', '/select-language'];
+        const isRoot = rootPaths.includes(location.pathname);
+
+        if (isRoot) {
+          CapApp.exitApp();
+        } else {
+          navigate(-1);
+        }
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
+  }, [navigate, location.pathname]);
+
+  return null;
+};
+
 function App() {
   const { checkAuth } = useAuthStore();
 
@@ -85,6 +121,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <BackButtonHandler />
       <Routes>
         
         {/* Auth Routes */}
