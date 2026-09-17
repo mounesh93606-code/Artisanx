@@ -147,10 +147,9 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         _remove, _session = get_rembg_tools()
         if use_rembg and _remove and _session:
             try:
-                # Downsample to max 800px specifically for neural net segmentation.
-                # u2netp evaluates internally at 320x320 anyway, so 800px gives identical
-                # edge precision with >75% reduction in peak memory on low-resource containers.
-                rembg_max = 800
+                # Downsample to 320px specifically for neural net segmentation (u2netp operates at 320x320 internally).
+                # This drops pixel volume by 95%, dramatically cutting CPU cycles on cloud servers.
+                rembg_max = 320
                 if orig_w > rembg_max or orig_h > rembg_max:
                     scale = min(rembg_max / orig_w, rembg_max / orig_h)
                     r_w, r_h = int(orig_w * scale), int(orig_h * scale)
@@ -158,14 +157,19 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
                 else:
                     img_for_cutout = img
                 
-                cutout_small = _remove(img_for_cutout, session=_session)
+                # Enforce a 6-second strict timeout so low-vCPU cloud containers never hang the browser
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(_remove, img_for_cutout, session=_session)
+                    cutout_small = future.result(timeout=6.0)
+
                 if img_for_cutout.size != img.size:
                     alpha_mask = cutout_small.split()[-1].resize(img.size, Image.Resampling.LANCZOS)
                     img.putalpha(alpha_mask)
                 else:
                     img = cutout_small
             except Exception as rembg_err:
-                print(f"Warning: rembg cutout failed ({rembg_err}), continuing with studio lighting enhancement")
+                print(f"Warning: rembg cutout timed out or failed ({rembg_err}), continuing with studio lighting enhancement")
             
         if debug:
             img.save(f"/tmp/artisanx_debug/{image_id}_2_cutout.png")

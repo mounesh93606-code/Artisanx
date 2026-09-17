@@ -15,7 +15,8 @@ const getInitialApiUrl = (): string => {
 export const API_URL = getInitialApiUrl();
 
 const api = axios.create({
-    baseURL: API_URL
+    baseURL: API_URL,
+    timeout: 35000 // 35-second network timeout to prevent infinite hanging
 });
 
 api.interceptors.request.use((config) => {
