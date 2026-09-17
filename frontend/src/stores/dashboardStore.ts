@@ -20,14 +20,32 @@ export interface DashboardMetrics {
 }
 
 interface DashboardState {
-  metrics: DashboardMetrics | null;
+  metrics: DashboardMetrics;
   loading: boolean;
   error: string | null;
   fetchMetrics: () => Promise<void>;
 }
 
+export const DEFAULT_METRICS: DashboardMetrics = {
+  total_products: 0,
+  published_products: 0,
+  new_enquiries: 0,
+  pending_quotations: 0,
+  orders: {
+    active: 0,
+    completed: 0,
+    cancelled: 0,
+    returned: 0,
+    total_value: 0,
+    completion_rate: 100,
+    cancellation_rate: 0,
+    on_time_rate: 100
+  },
+  recent_activity: []
+};
+
 export const useDashboardStore = create<DashboardState>((set) => ({
-  metrics: null,
+  metrics: DEFAULT_METRICS,
   loading: false,
   error: null,
   fetchMetrics: async () => {
@@ -36,6 +54,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const res = await api.get('/dashboard/artisan');
       set({ metrics: res.data, loading: false });
     } catch (err: any) {
+      console.error("Dashboard fetch error:", err);
       set({ error: err.message, loading: false });
     }
   }

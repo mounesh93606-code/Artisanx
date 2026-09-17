@@ -28,8 +28,25 @@ api.interceptors.request.use((config) => {
 });
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response && error.response.status === 401) {
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response && error.response.status === 401 && !originalRequest?._retry) {
+            originalRequest._retry = true;
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken && !originalRequest.url?.includes('/auth/refresh') && !originalRequest.url?.includes('/auth/login')) {
+                try {
+                    const res = await axios.post(`${API_URL}/auth/refresh`, { refresh_token: refreshToken });
+                    if (res.data?.access_token) {
+                        localStorage.setItem('auth_token', res.data.access_token);
+                        if (res.data.refresh_token) localStorage.setItem('refresh_token', res.data.refresh_token);
+                        useAuthStore.setState({ token: res.data.access_token, user: res.data.user || useAuthStore.getState().user });
+                        originalRequest.headers.Authorization = `Bearer ${res.data.access_token}`;
+                        return api(originalRequest);
+                    }
+                } catch (refreshErr) {
+                    console.error('Session refresh failed:', refreshErr);
+                }
+            }
             useAuthStore.getState().logout();
             window.location.href = '/login';
         }

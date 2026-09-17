@@ -13,7 +13,7 @@ export default function ArtisanHome() {
   
   const [profile, setProfile] = useState<any>(null);
   
-  const { metrics, loading, fetchMetrics } = useDashboardStore();
+  const { metrics, fetchMetrics } = useDashboardStore();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -29,8 +29,6 @@ export default function ArtisanHome() {
     fetchProfile();
     fetchMetrics();
   }, [fetchMetrics]);
-
-  if (loading || !metrics) return <div className="min-h-screen bg-surface flex items-center justify-center font-semibold text-on-surface-variant">{t('common.loading')}</div>;
 
   const artisanName = profile?.artisan_name?.split(' ')[0] || t('auth.artisan');
 

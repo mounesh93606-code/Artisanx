@@ -7,6 +7,14 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 import traceback
 
+def parse_value(val) -> float:
+    if val is None:
+        return 0.0
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
 @router.get("/artisan")
 def get_artisan_dashboard(current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
     try:
