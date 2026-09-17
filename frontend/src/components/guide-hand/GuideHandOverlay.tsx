@@ -46,7 +46,9 @@ export default function GuideHandOverlay() {
   const searchTimeoutRef = useRef<number | null>(null);
 
   const currentLang = i18n.language || authLang || user?.preferred_language || 'en';
-  const isArtisanCreateRoute = location.pathname === '/artisan/product/create';
+  const isArtisanCreateRoute =
+    location.pathname.startsWith('/artisan/product/create') ||
+    location.pathname.startsWith('/artisan/products/new');
 
   // Dynamic step configuration when in product creation wizard
   const getActiveStepDetails = useCallback(() => {
@@ -339,12 +341,17 @@ export default function GuideHandOverlay() {
   }
 
   // Handle Next button click with strict validation
-  const handleNextClick = () => {
+  const handleNextClick = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setWarningMsg(null);
 
     // If not in the product creation wizard yet, immediately navigate to create page!
     if (!isArtisanCreateRoute) {
       setProductStep(1);
+      nextStep();
       navigate('/artisan/product/create');
       return;
     }
@@ -440,18 +447,10 @@ export default function GuideHandOverlay() {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
-      {/* Target Highlight Outline */}
+      {/* Target Highlight Outline (strictly pointer-events-none so touches pass to button!) */}
       {targetRect && (
         <div
-          onClick={() => {
-            if (activeStep?.targetId === 'add-product') {
-              setProductStep(1);
-              navigate('/artisan/product/create');
-            }
-          }}
-          className={`absolute transition-all duration-300 rounded-2xl ${
-            activeStep?.targetId === 'add-product' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'
-          }`}
+          className="absolute pointer-events-none transition-all duration-300 rounded-2xl"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
@@ -469,15 +468,9 @@ export default function GuideHandOverlay() {
         </div>
       )}
 
-      {/* Animated Pointing Hand */}
+      {/* Animated Pointing Hand (strictly pointer-events-none!) */}
       {targetRect && (
         <motion.div
-          onClick={() => {
-            if (activeStep?.targetId === 'add-product') {
-              setProductStep(1);
-              navigate('/artisan/product/create');
-            }
-          }}
           animate={
             handPos.direction === 'up'
               ? { y: [0, -10, 0], scale: [1, 1.08, 1] }
@@ -490,19 +483,17 @@ export default function GuideHandOverlay() {
             duration: 1.2,
             ease: 'easeInOut'
           }}
-          className={`absolute z-[99995] drop-shadow-[0_6px_16px_rgba(217,119,6,0.6)] ${
-            activeStep?.targetId === 'add-product' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'
-          }`}
+          className="absolute pointer-events-none z-[99995] drop-shadow-[0_6px_16px_rgba(217,119,6,0.6)]"
           style={{
             left: handPos.x,
             top: handPos.y
           }}
         >
           <div
-            className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-2xl border-2 border-white"
+            className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-2xl border-2 border-white pointer-events-none"
             style={{ transform: `rotate(${rotationDeg}deg)` }}
           >
-            <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white text-white">
+            <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white text-white pointer-events-none">
               <path d="M12 2C11.17 2 10.5 2.67 10.5 3.5V11H9.75C8.78 11 8 11.78 8 12.75V14.5L5.73 12.23C5.14 11.64 4.19 11.64 3.6 12.23C3.01 12.82 3.01 13.77 3.6 14.36L8.46 19.22C9.5 20.26 10.9 20.85 12.38 20.85H16C18.21 20.85 20 19.06 20 16.85V10C20 9.17 19.33 8.5 18.5 8.5C18.3 8.5 18.11 8.54 17.94 8.62C17.69 7.82 16.94 7.25 16.05 7.25C15.82 7.25 15.6 7.3 15.4 7.4C15.13 6.72 14.47 6.25 13.7 6.25C13.52 6.25 13.35 6.28 13.19 6.34V3.5C13.19 2.67 12.52 2 11.69 2H12Z" />
             </svg>
           </div>

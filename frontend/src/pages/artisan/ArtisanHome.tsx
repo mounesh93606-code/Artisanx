@@ -5,6 +5,8 @@ import BottomNav from '../../components/BottomNav';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import { LanguageSwitcher } from '../../components/layout/LanguageSwitcher';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { useGuidanceStore } from '../../stores/guidanceStore';
+import { useProductStore } from '../../stores/productStore';
 import api from '../../lib/api';
 
 export default function ArtisanHome() {
@@ -72,7 +74,14 @@ export default function ArtisanHome() {
             data-help="add-product"
             data-guide-id="add-product-button"
             id="add-product-button" 
-            onClick={() => navigate('/artisan/product/create')}
+            onClick={() => {
+              useProductStore.getState().setStep(1);
+              const guidance = useGuidanceStore.getState();
+              if (guidance.isActive && guidance.currentWorkflow?.name === 'artisan_walkthrough') {
+                guidance.nextStep();
+              }
+              navigate('/artisan/product/create');
+            }}
             className="w-full relative overflow-hidden bg-primary hover:bg-primary-container text-on-primary rounded-2xl p-5 shadow-md active:scale-[0.98] transition-all flex flex-col justify-between text-left group"
           >
             <div className="flex items-center justify-between w-full">
