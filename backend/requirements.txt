@@ -4,6 +4,8 @@ supabase
 python-dotenv
 python-multipart
 pydantic
+pydantic-settings
+requests
 httpx
 openai
 Pillow
@@ -12,6 +14,7 @@ pydub
 qrcode
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt
 opencv-python-headless
 numpy
 google-genai
