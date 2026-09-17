@@ -112,4 +112,4 @@ app.include_router(support_requests_router)
 app.include_router(disputes_router)
 @app.get("/health")
 def health_check() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "version": "v1.1-fast-cutout"}

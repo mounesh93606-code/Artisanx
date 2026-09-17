@@ -25,8 +25,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download lightweight u2netp ONNX model at build time so Render never downloads it at runtime
-RUN mkdir -p /root/.u2net && python -c "import onnxruntime; from rembg import new_session; new_session('u2netp')"
+# Pre-download lightweight u2netp ONNX model at build time if network is available
+RUN python -c "import onnxruntime; from rembg import new_session; new_session('u2netp')" || true
 
 # Copy backend application source
 COPY . .
