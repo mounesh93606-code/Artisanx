@@ -18,6 +18,7 @@ export default function BuyerEnquiryDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     async function fetchEnquiry() {
       if (!id || !user || !token) return;
       try {

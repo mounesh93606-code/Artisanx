@@ -23,6 +23,7 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
     const [isSending, setIsSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -81,7 +82,10 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
     }, [enquiryId, token, conversationId]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Scroll only the internal message container, NEVER the window/page
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
     }, [messages]);
 
     const sendMessage = async (e?: React.FormEvent) => {
@@ -140,7 +144,7 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
             </div>
             
             {/* Messages Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/60">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/60 max-h-[350px]">
                 {loading ? (
                     <div className="h-full flex items-center justify-center">
                         <div className="animate-pulse flex items-center gap-2 text-stone-400 text-sm">

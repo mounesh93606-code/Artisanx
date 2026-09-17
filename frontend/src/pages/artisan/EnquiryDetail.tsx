@@ -57,6 +57,7 @@ export default function EnquiryDetail() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     async function fetchDetail() {
       try {
         const response = await axios.get(`${API_URL}/enquiries/${id}`, {
