@@ -4,6 +4,72 @@ import { useProductStore } from '../../stores/productStore';
 import api from '../../lib/api';
 import { Button } from '../ui/Button';
 
+const optimizeImageForUpload = async (file: File): Promise<File> => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 2048;
+                let { width, height } = img;
+                
+                // If within bounds and not overly massive, preserve original
+                if (width <= maxDim && height <= maxDim && file.size <= 2.5 * 1024 * 1024) {
+                    resolve(file);
+                    return;
+                }
+                
+                if (width > height) {
+                    if (width > maxDim) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    }
+                } else {
+                    if (height > maxDim) {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(file);
+                    return;
+                }
+                
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob && blob.size < file.size) {
+                            const cleanName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                            const optimizedFile = new File([blob], cleanName, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(optimizedFile);
+                        } else {
+                            resolve(file);
+                        }
+                    },
+                    'image/jpeg',
+                    0.92
+                );
+            };
+            img.onerror = () => resolve(file);
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+    });
+};
+
 const Step1Photo = ({ t }: { t: any }) => {
     const { photos, addPhoto, deletePhoto, setPhotos, setStep } = useProductStore();
     const [isLoading, setIsLoading] = useState(false);
@@ -42,15 +108,16 @@ const Step1Photo = ({ t }: { t: any }) => {
     };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const rawFile = e.target.files?.[0];
+        if (!rawFile) return;
         
         setIsLoading(true);
         setErrorMsg('');
-        const localUrl = URL.createObjectURL(file);
+        const localUrl = URL.createObjectURL(rawFile);
         setUploadPreview(localUrl);
         
         try {
+            const file = await optimizeImageForUpload(rawFile);
             let currentDraftId = useProductStore.getState().draftId;
             if (!currentDraftId) {
                 await useProductStore.getState().saveDraft();
@@ -279,7 +346,7 @@ const Step1Photo = ({ t }: { t: any }) => {
                         ) : (
                             <div className="flex flex-col items-center w-full">
                                 <div className="relative w-full aspect-square cursor-pointer group rounded-xl overflow-hidden border border-outline-variant bg-surface-container-lowest shadow-sm" onClick={() => setPreviewImage(photo.original_url || photo.image_url)}>
-                                    <img src={photo.original_url || photo.image_url} alt="Original" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" />
+                                    <img src={photo.original_url || photo.image_url} alt="Original" className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
                                 </div>
                             </div>
                         )}

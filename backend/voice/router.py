@@ -26,11 +26,14 @@ def route_get_transcript(record_id: str, current_user: Any = Depends(get_current
 @router.post("/process", response_model=schemas.TranscriptResponse)
 def route_process_voice(
     product_id: Optional[str] = Form(None),
+    language: Optional[str] = Form(None),
     file: UploadFile = File(...),
     current_user: Any = Depends(get_current_user),
     token: str = Depends(get_token)
 ):
-    return service.process_voice_directly(file, product_id, current_user["id"], token)
+    pref_lang = language or current_user.get("preferred_language") or "en"
+    return service.process_voice_directly(file, product_id, current_user["id"], token, language=pref_lang)
+
 
 from pydantic import BaseModel
 

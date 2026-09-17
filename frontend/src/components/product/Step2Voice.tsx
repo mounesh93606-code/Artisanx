@@ -26,19 +26,39 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
 
     const startRecording = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            setErrorMsg('');
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+
+            let mimeType = 'audio/webm';
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+                    else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
+                    else mimeType = '';
+                }
+            }
+
+            const options = mimeType ? { mimeType } : undefined;
+            const recorder = new MediaRecorder(stream, options);
             mediaRecorder.current = recorder;
             
             const chunks: BlobPart[] = [];
-            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
             recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
                 setAudioBlob(blob);
                 setAudioUrl(URL.createObjectURL(blob));
             };
             
-            recorder.start();
+            recorder.start(250);
             setIsRecording(true);
             setTimer(0);
             timerRef.current = window.setInterval(() => setTimer(t => t + 1), 1000);
@@ -66,17 +86,27 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
             const formData = new FormData();
             formData.append('file', audioBlob, 'recording.webm');
             if (draftId) formData.append('product_id', draftId);
+            if (lang) formData.append('language', lang);
             
             const transcribeRes = await api.post('/voice/process', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             
-            const text = transcribeRes.data.translated_text || transcribeRes.data.original_text;
-            setDescriptionText(text);
+            const rawText = transcribeRes.data.translated_text || transcribeRes.data.original_text || '';
+            const cleanText = rawText.trim();
+            const noiseArtifacts = ['dii', 'di', 'umm', 'the', 'um', 'ah', 'oh', 'you', 'dee', 'தி', 'दी', 'd'];
+
+            if (!cleanText || noiseArtifacts.includes(cleanText.toLowerCase()) || cleanText.length <= 2) {
+                setErrorMsg(t.noSpeechDetected || "No clear speech detected. Please speak closer to your microphone or type your description.");
+                setIsProcessing(false);
+                return;
+            }
+
+            setDescriptionText(cleanText);
             setVoiceData({
                 record_id: transcribeRes.data.voice_record_id,
-                original_text: transcribeRes.data.original_text,
-                translated_text: text
+                original_text: transcribeRes.data.original_text || cleanText,
+                translated_text: cleanText
             });
         } catch (err: any) {
             console.error("Voice process error:", err);

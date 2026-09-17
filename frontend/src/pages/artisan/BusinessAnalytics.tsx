@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 import { useDashboardStore } from '../../stores/dashboardStore';
@@ -9,22 +9,58 @@ export default function BusinessAnalytics() {
   const [loading, setLoading] = useState(true);
   const { metrics, fetchMetrics } = useDashboardStore();
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const [perfRes] = await Promise.all([
-          api.get('/analytics/artisan/performance'),
-          fetchMetrics()
-        ]);
-        setPerformance(perfRes.data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const results = await Promise.allSettled([
+        api.get('/analytics/artisan/performance'),
+        fetchMetrics()
+      ]);
+      if (results[0].status === 'fulfilled' && results[0].value?.data) {
+        setPerformance(results[0].value.data);
       }
-    };
+    } catch (e) {
+      console.error("Failed to fetch analytics:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAnalytics();
   }, [fetchMetrics]);
+
+  const safeMetrics = useMemo(() => {
+    return metrics || {
+      total_products: 0,
+      published_products: 0,
+      new_enquiries: 0,
+      pending_quotations: 0,
+      orders: {
+        active: 0,
+        completed: 0,
+        cancelled: 0,
+        returned: 0,
+        total_value: 0,
+        completion_rate: 0,
+        cancellation_rate: 0,
+        on_time_rate: 0
+      },
+      recent_activity: []
+    };
+  }, [metrics]);
+
+  const safePerf = useMemo(() => {
+    return performance || {
+      total_views: 0,
+      total_passport_views: 0,
+      total_saves: 0,
+      total_enquiries: 0,
+      total_orders: 0,
+      conversion_rate: 0,
+      top_products: []
+    };
+  }, [performance]);
 
   return (
     <div className="w-full min-h-screen bg-surface flex flex-col pb-safe">
@@ -39,12 +75,22 @@ export default function BusinessAnalytics() {
             </button>
             <h1 className="font-bold text-lg text-on-surface tracking-tight truncate ml-1">Business Analytics</h1>
           </div>
+          <button
+            onClick={fetchAnalytics}
+            className="p-2 text-stone-500 hover:text-primary transition-colors rounded-full hover:bg-surface-container"
+            title="Refresh Analytics"
+          >
+            <span className={`material-symbols-outlined text-[20px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
+          </button>
         </div>
       </header>
 
       <main className="flex-1 px-6 pt-24 pb-8 w-full max-w-lg mx-auto space-y-6">
-        {loading || !performance || !metrics ? (
-          <div className="flex justify-center p-8"><span className="text-on-surface-variant font-medium">Loading analytics...</span></div>
+        {loading && !performance && !metrics ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs text-on-surface-variant font-medium">Loading business insights...</span>
+          </div>
         ) : (
           <>
             <section className="bg-primary-fixed/20 border border-primary/20 rounded-xl p-5 shadow-sm">
@@ -54,38 +100,40 @@ export default function BusinessAnalytics() {
                   <span className="material-symbols-outlined text-[28px]">account_balance_wallet</span>
                 </div>
                 <div>
-                  <span className="text-3xl font-black text-primary">₹{metrics.orders.total_value.toLocaleString()}</span>
-                  <p className="text-xs font-semibold text-on-surface-variant mt-0.5">Across {performance.total_orders} orders</p>
+                  <span className="text-3xl font-black text-primary">₹{(safeMetrics.orders?.total_value || 0).toLocaleString()}</span>
+                  <p className="text-xs font-semibold text-on-surface-variant mt-0.5">Across {safePerf.total_orders || 0} orders</p>
                 </div>
               </div>
             </section>
 
             <section className="grid grid-cols-2 gap-3">
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm text-center">
-                <span className="text-2xl font-black text-secondary">{performance.total_views}</span>
+                <span className="text-2xl font-black text-secondary">{safePerf.total_views || 0}</span>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase mt-1">Total Views</span>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm text-center">
-                <span className="text-2xl font-black text-tertiary">{performance.total_passport_views}</span>
+                <span className="text-2xl font-black text-tertiary">{safePerf.total_passport_views || 0}</span>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase mt-1">Passport Views</span>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm text-center">
-                <span className="text-2xl font-black text-primary">{performance.conversion_rate}%</span>
+                <span className="text-2xl font-black text-primary">{safePerf.conversion_rate || 0}%</span>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase mt-1">Conversion Rate</span>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm text-center">
-                <span className="text-2xl font-black text-error">{metrics.orders.cancellation_rate}%</span>
+                <span className="text-2xl font-black text-error">{safeMetrics.orders?.cancellation_rate || 0}%</span>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase mt-1">Cancel Rate</span>
               </div>
             </section>
 
             <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm">
               <h3 className="text-sm font-bold text-on-surface mb-4">Top Products</h3>
-              {performance.top_products.length === 0 ? (
-                <p className="text-sm text-on-surface-variant">No product data available yet.</p>
+              {!safePerf.top_products || safePerf.top_products.length === 0 ? (
+                <div className="text-center py-6 text-stone-400 text-xs">
+                  No product activity data recorded yet.
+                </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {performance.top_products.map((p: any, idx: number) => (
+                  {safePerf.top_products.map((p: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-sm shrink-0">
                         #{idx + 1}
@@ -93,9 +141,9 @@ export default function BusinessAnalytics() {
                       <div className="flex-1 min-w-0">
                         <span className="font-bold text-sm text-on-surface truncate block">{p.title}</span>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-medium text-on-surface-variant flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">visibility</span> {p.views}</span>
-                          <span className="text-[10px] font-medium text-on-surface-variant flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">chat</span> {p.enquiries}</span>
-                          <span className="text-[10px] font-medium text-primary flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">shopping_bag</span> {p.orders}</span>
+                          <span className="text-[10px] font-medium text-on-surface-variant flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">visibility</span> {p.views || 0}</span>
+                          <span className="text-[10px] font-medium text-on-surface-variant flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">chat</span> {p.enquiries || 0}</span>
+                          <span className="text-[10px] font-medium text-primary flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">shopping_bag</span> {p.orders || 0}</span>
                         </div>
                       </div>
                     </div>

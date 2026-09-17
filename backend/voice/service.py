@@ -13,33 +13,46 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mpeg", "audio/mp3", "audio/wav", "audio/mp4", "audio/ogg"]
 
-def run_audio_transcription_pipeline(audio_path: str, preferred_lang: str = "ta") -> dict:
+def run_audio_transcription_pipeline(audio_path: str, preferred_lang: str = "en") -> dict:
     """
     Primary: Bhashini ASR (Speech-to-Text) + NMT (Machine Translation).
     Fallback: Gemini Multimodal Audio Model.
     """
     # 1. PRIMARY: Bhashini (Udyat / Dhruva Inference)
-    if is_bhashini_configured():
+    if is_bhashini_configured() and preferred_lang in ["ta", "hi", "te", "kn", "ml", "bn", "mr", "gu", "pa", "or", "as", "ur"]:
         try:
             logger.info(f"Using Primary Bhashini Pipeline for audio processing (source_lang={preferred_lang})...")
             res = bhashini_client.transcribe_and_translate(audio_path, source_lang=preferred_lang, target_lang="en")
             if res and (res.get("original_text") or res.get("english_translation")):
-                logger.info("Bhashini ASR + NMT succeeded.")
-                return res
+                orig = res.get("original_text", "").strip()
+                # Guard against short hallucinations from silence/clicks like 'dii', 'தி', 'di'
+                if len(orig) > 3 and orig.lower() not in ["dii", "தி", "दी", "dee"]:
+                    logger.info("Bhashini ASR + NMT succeeded.")
+                    return res
+                else:
+                    logger.info(f"Bhashini produced likely noise artifact '{orig}'. Falling back to Gemini...")
         except Exception as e:
             logger.warning(f"Bhashini pipeline failed: {e}. Falling back to Gemini...")
 
     # 2. FALLBACK: Gemini Multimodal
-    logger.info("Running Gemini fallback for audio transcription...")
-    prompt = """
-    Please listen to this audio recorded by an Indian artisan describing their product.
+    logger.info(f"Running Gemini fallback for audio transcription with preferred_lang={preferred_lang}...")
+    prompt = f"""
+    You are an expert assistant helping Indian artisans catalog their handmade products.
+    Please listen to this audio of an artisan describing their craft/product.
+    The artisan's preferred language is '{preferred_lang}' (they may speak in {preferred_lang}, English, Hindi, or a mix of regional languages).
+
+    CRITICAL INSTRUCTIONS:
+    - Transcribe only genuine spoken words describing the product, materials, process, or craft.
+    - Do NOT transcribe background silence, clicks, mic pops, or static into random syllables or nonsense words like 'dii', 'umm', 'the', 'di', etc.
+    - If the audio contains only ambient silence or unclear noise, return empty strings for original_text and english_translation.
+    - Format the English translation into a clean, compelling, and professional product description for buyers.
+
     Return a JSON response with EXACTLY this structure:
-    {
-      "detected_language": "supported language code (en/ta/hi/te/kn/ml/bn/mr/ur)",
-      "original_text": "verbatim transcript in the original spoken language",
-      "english_translation": "natural English translation"
-    }
-    Keep the translation natural and professional, not word-for-word literal.
+    {{
+      "detected_language": "{preferred_lang}",
+      "original_text": "accurate verbatim transcript in the spoken language",
+      "english_translation": "clear, engaging English product description"
+    }}
     """
     result_json = process_audio_and_generate(audio_path, prompt, mime_type="application/json")
     
@@ -56,11 +69,22 @@ def run_audio_transcription_pipeline(audio_path: str, preferred_lang: str = "ta"
         logger.error(f"JSON Parse Error from Gemini response: {e}, Content: {cleaned_json}")
         raise HTTPException(status_code=500, detail="Failed to parse transcription response")
 
+    orig_out = data.get("original_text", "").strip()
+    eng_out = data.get("english_translation", "").strip()
+
+    # Extra safety against 'dii', clicks, or background noise hallucinations
+    noise_artifacts = {"dii", "di", "தி", "दी", "dee", "umm", "the", "um", "ah", "oh", "you", "d"}
+    if orig_out.lower() in noise_artifacts or len(orig_out) <= 2:
+        orig_out = ""
+    if eng_out.lower() in noise_artifacts or len(eng_out) <= 2:
+        eng_out = ""
+
     return {
         "detected_language": data.get("detected_language", preferred_lang),
-        "original_text": data.get("original_text", ""),
-        "english_translation": data.get("english_translation", data.get("original_text", ""))
+        "original_text": orig_out,
+        "english_translation": eng_out or orig_out
     }
+
 
 def upload_audio(file: UploadFile, product_id: str, artisan_id: str, token: str):
     if file.content_type not in ALLOWED_AUDIO_TYPES and not file.filename.endswith((".webm", ".mp3", ".wav")):
@@ -171,7 +195,7 @@ def get_transcript(record_id: str, artisan_id: str, token: str):
             raise HTTPException(status_code=404, detail="Transcript not found")
     return res.data[0]
 
-def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, token: str):
+def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, token: str, language: str = "en"):
     if file.content_type not in ALLOWED_AUDIO_TYPES and not file.filename.endswith((".webm", ".mp3", ".wav")):
         raise HTTPException(status_code=400, detail="Invalid audio format")
     
@@ -217,9 +241,9 @@ def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, t
             
         record_id = res.data[0]["id"]
         
-        # 3. Call Primary Bhashini Pipeline with Fallback to Gemini
+        # 3. Call Primary Bhashini Pipeline with Fallback to Gemini with preferred language
         try:
-            data = run_audio_transcription_pipeline(temp_path)
+            data = run_audio_transcription_pipeline(temp_path, preferred_lang=language)
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
@@ -228,7 +252,7 @@ def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, t
             "voice_record_id": record_id,
             "original_text": data.get("original_text", ""),
             "translated_text": data.get("english_translation", ""),
-            "original_language": data.get("detected_language", "ta"),
+            "original_language": data.get("detected_language", language),
             "translated_language": "en"
         }
         
@@ -247,6 +271,7 @@ def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, t
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Process failed: {str(e)}")
+
 
 def synthesize_speech(text: str, language: str = "ta", gender: str = "female") -> dict:
     """TTS Endpoint helper using Bhashini"""

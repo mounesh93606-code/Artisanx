@@ -16,7 +16,7 @@ except ImportError:
     remove = None
     rembg_session = None
 
-MAX_FILE_SIZE = 10 * 1024 * 1024
+MAX_FILE_SIZE = 25 * 1024 * 1024
 ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
 def verify_image_owner(image_id: str, artisan_id: str, token: str):
@@ -118,8 +118,8 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
             os.makedirs("/tmp/artisanx_debug", exist_ok=True)
             img.save(f"/tmp/artisanx_debug/{image_id}_1_original.png")
             
-        # Fast Downscale before rembg to vastly speed it up
-        max_dim = 1024
+        # High-resolution scale before rembg for crisp e-commerce details
+        max_dim = 1600
         if img.width > max_dim or img.height > max_dim:
             scale = min(max_dim / img.width, max_dim / img.height)
             new_w = int(img.width * scale)
@@ -162,42 +162,41 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
             lab = cv2.cvtColor(cv_rgb, cv2.COLOR_RGB2LAB)
             l_chan, a_chan, b_chan = cv2.split(lab)
             
-            # Conservative CLAHE
-            clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+            # Enhanced CLAHE for rich micro-contrast on craft textures
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
             l_eq = clahe.apply(l_chan)
             
-            # Recombine leaving A and B untouched to preserve color
+            # Recombine leaving A and B untouched to preserve accurate craft color
             lab_eq = cv2.merge((l_eq, a_chan, b_chan))
             cv_rgb_eq = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2RGB)
             rgb_img = Image.fromarray(cv_rgb_eq)
             
-        # Conditional Sharpening
-        # Apply light sharpening ONLY if the image is NOT blurry.
-        # This reuses the exact blur threshold (norm_blur < 40.0) from the quality check.
+        # Studio Sharpening
+        # Apply crisp sharpening for handmade details (wood, textiles, pottery, jewelry)
         if not is_blurry:
             enhancer = ImageEnhance.Sharpness(rgb_img)
-            rgb_img = enhancer.enhance(1.10)
+            rgb_img = enhancer.enhance(1.18)
         
         img = Image.merge("RGBA", (*rgb_img.split(), a))
         
         if debug:
             img.save(f"/tmp/artisanx_debug/{image_id}_4_enhanced_fg.png")
 
-        # Aspect-Ratio-Aware Framing
+        # Aspect-Ratio-Aware High-Resolution Studio Framing
         ratio = img.width / img.height
         
         if ratio > 1.4:
             # Wide
-            target_width = 1200
-            target_height = max(int(1200 / ratio), 600)
+            target_width = 1600
+            target_height = max(int(1600 / ratio), 800)
         elif ratio < 0.71:
             # Tall
-            target_height = 1200
-            target_width = max(int(1200 * ratio), 600)
+            target_height = 1600
+            target_width = max(int(1600 * ratio), 800)
         else:
-            # Square-ish
-            target_width = 1024
-            target_height = 1024
+            # Square-ish high-def
+            target_width = 1400
+            target_height = 1400
 
         # Scaling & Padding
         # Target ~80% of canvas dimension to give product dominant scale 
@@ -242,15 +241,15 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         shadow_a = shadow_a.point(lambda p: p * shadow_opacity)
         shadow_canvas = Image.merge("RGBA", (shadow_r, shadow_g, shadow_b, shadow_a))
         
-        # Determine background color based on product brightness
-        # Reuse orig_quality brightness score
-        mean_brightness = orig_quality["brightness_score"] / 100.0 * 255.0 # Un-normalize for comparison
-        if mean_brightness > 180:
-            bg_color = (230, 230, 230)
-        elif mean_brightness < 90:
-            bg_color = (245, 245, 245)
+        # Determine studio backdrop color based on product brightness
+        # Clean museum/studio off-white instead of dull cement gray
+        mean_brightness = orig_quality["brightness_score"] / 100.0 * 255.0
+        if mean_brightness > 220:
+            bg_color = (246, 247, 249)
+        elif mean_brightness < 80:
+            bg_color = (253, 253, 254)
         else:
-            bg_color = (240, 240, 240)
+            bg_color = (250, 250, 252)
             
         # Final compositing
         final_img = Image.new("RGB", (target_width, target_height), bg_color)
@@ -260,10 +259,10 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         final_img.paste(img, (paste_x, paste_y), img)
         
         if debug:
-            final_img.save(f"/tmp/artisanx_debug/{image_id}_5_final.jpg", quality=95)
+            final_img.save(f"/tmp/artisanx_debug/{image_id}_5_final.jpg", quality=96)
         
         out_buffer = io.BytesIO()
-        final_img.save(out_buffer, format="JPEG", quality=95)
+        final_img.save(out_buffer, format="JPEG", quality=96, optimize=True)
         out_bytes = out_buffer.getvalue()
         
         quality_res = calculate_image_quality(out_bytes)
