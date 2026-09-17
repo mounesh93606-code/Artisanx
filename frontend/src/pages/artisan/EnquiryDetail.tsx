@@ -63,11 +63,24 @@ export default function EnquiryDetail() {
         const response = await axios.get(`${API_URL}/enquiries/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setEnq(response.data);
+        const data = response.data;
+        setEnq(data);
+        if (data.quotation) {
+          const r = data.quotation.current_revision || data.quotation.latest_revision || data.quotation.revisions?.[0];
+          if (r) {
+            setSentQuoteSummary({
+              quantity: r.quantity,
+              unit_price: r.unit_price,
+              customization_cost: r.customization_cost || 0,
+              production_lead_time_days: r.production_lead_time_days,
+              total: r.total_price
+            });
+          }
+        }
         setQuoteData(prev => ({
           ...prev, 
-          quantity: response.data.quantity,
-          unit_price: response.data.products?.price || response.data.products?.suggested_price || 0
+          quantity: data.quantity,
+          unit_price: data.products?.price || data.products?.suggested_price || 0
         }));
       } catch (err) {
         console.error(err);
@@ -77,6 +90,10 @@ export default function EnquiryDetail() {
     }
     if (token && id) fetchDetail();
   }, [token, id]);
+
+
+  const [quoteSuccess, setQuoteSuccess] = useState(false);
+  const [sentQuoteSummary, setSentQuoteSummary] = useState<any>(null);
 
   const handleRespond = async () => {
     if (!responseType) return;
@@ -105,11 +122,21 @@ export default function EnquiryDetail() {
       });
       await sendQuotation(quoteRes.quotation.id);
       
-      // Update local state to show quote sent
-      setEnq({ ...enq, status: 'quote_sent' });
+      // Update local state to show quote sent with complete confirmation
+      const total = (quoteData.quantity * quoteData.unit_price) + (quoteData.customization_cost || 0);
+      setSentQuoteSummary({
+        quantity: quoteData.quantity,
+        unit_price: quoteData.unit_price,
+        customization_cost: quoteData.customization_cost || 0,
+        production_lead_time_days: quoteData.production_lead_time_days,
+        total
+      });
+      setQuoteSuccess(true);
+      setEnq((prev: any) => ({ ...prev, status: 'quote_sent' }));
       setShowQuoteForm(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create quote", err);
+      alert(err.response?.data?.detail || "Failed to create quotation. Please check quantity and price.");
     } finally {
       setSubmitting(false);
     }
@@ -245,6 +272,109 @@ export default function EnquiryDetail() {
             )}
           </div>
         </div>
+
+        {/* Quotation Sent Confirmation Banner */}
+
+        {(enq.status === 'quote_sent' || quoteSuccess) && (
+          <div className="bg-green-50/95 border-2 border-green-500 rounded-2xl p-5 shadow-sm animate-in fade-in">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <Check className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="font-bold text-base text-green-950">Quotation Sent to Buyer Successfully!</h4>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    Waiting for Buyer Acceptance
+                  </span>
+                </div>
+                <p className="text-xs text-green-800 mt-1 leading-relaxed">
+                  Your formal quotation has been sent to the buyer. The buyer has been notified and can now review and accept it to create an official order.
+                </p>
+
+                {sentQuoteSummary && (
+                  <div className="mt-3.5 bg-white/95 rounded-xl p-3.5 border border-green-200 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-stone-700">
+                    <div>
+                      <span className="text-stone-400 block">Quantity</span>
+                      <span className="font-bold text-stone-900 text-sm">{sentQuoteSummary.quantity} units</span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block">Unit Price</span>
+                      <span className="font-bold text-stone-900 text-sm">₹{sentQuoteSummary.unit_price}</span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block">Lead Time</span>
+                      <span className="font-bold text-stone-900 text-sm">{sentQuoteSummary.production_lead_time_days || 7} days</span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block">Total Quotation</span>
+                      <span className="font-bold text-green-700 text-sm">₹{sentQuoteSummary.total}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quotation Accepted Banner */}
+        {enq.status === 'accepted' && (
+          <div className="bg-green-50/95 border-2 border-green-500 rounded-2xl p-5 shadow-sm animate-in fade-in">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <Check className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="font-bold text-base text-green-950">Quotation Accepted by Buyer!</h4>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300">
+                    Order Confirmed
+                  </span>
+                </div>
+                <p className="text-xs text-green-800 mt-1 leading-relaxed">
+                  The buyer accepted your quotation and an official order has been created.
+                </p>
+                {enq.quotation?.order_id && (
+                  <button
+                    onClick={() => navigate(`/artisan/order/${enq.quotation.order_id}`)}
+                    className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                  >
+                    View Confirmed Order &rarr;
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Changes Requested Banner */}
+        {enq.status === 'changes_requested' && (
+          <div className="bg-purple-50/95 border-2 border-purple-400 rounded-2xl p-5 shadow-sm animate-in fade-in">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="font-bold text-base text-purple-950">Buyer Requested Changes</h4>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-purple-800 mt-1 leading-relaxed">
+                  The buyer reviewed your quotation and asked for changes. Check the buyer messages below or revise your quotation.
+                </p>
+                <button
+                  onClick={() => setShowQuoteForm(true)}
+                  className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                >
+                  Revise Quotation &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Quote Form */}
         {isResponded && enq.artisan_response === 'interested' && enq.status === 'responded' && !showQuoteForm && (

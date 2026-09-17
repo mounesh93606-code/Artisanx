@@ -33,14 +33,15 @@ def create_quotation(req: QuotationCreate, current_user: dict = Depends(get_curr
     # 1. Insert header
     q_data = {
         "display_id": display_id,
-        "enquiry_id": req.enquiry_id,
-        "product_id": enquiry["product_id"],
-        "buyer_id": enquiry["buyer_id"],
-        "artisan_id": current_user["id"],
+        "enquiry_id": str(req.enquiry_id),
+        "product_id": str(enquiry["product_id"]),
+        "buyer_id": str(enquiry["buyer_id"]),
+        "artisan_id": str(current_user["id"]),
         "current_version": 1,
         "agreed_variant": enquiry.get("requested_variant"),
         "status": "draft"
     }
+
     
     q_res = client.table("quotations").insert(q_data).execute()
     if not q_res.data:
@@ -220,6 +221,7 @@ def request_changes_quotation(id: str, req: QuotationAction, current_user: dict 
         raise HTTPException(status_code=403, detail="Forbidden")
         
     client.table("quotations").update({"status": "changes_requested"}).eq("id", id).execute()
+    client.table("buyer_enquiries").update({"status": "changes_requested"}).eq("id", q_res.data[0]["enquiry_id"]).execute()
     
     create_notification(
         user_id=q_res.data[0]["artisan_id"],
@@ -245,10 +247,30 @@ def list_buyer_quotations(current_user: dict = Depends(get_current_user), token:
     res = client.table("quotations").select("*, artisan:users!artisan_id(display_name), products(title, images:product_images(image_url))").eq("buyer_id", current_user["id"]).order("created_at", desc=True).execute()
     return {"quotations": res.data}
 
+@router.get("/by-enquiry/{enquiry_id}")
+def get_quotation_by_enquiry(enquiry_id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
+    client = get_authenticated_client(token)
+    res = client.table("quotations").select("*, buyer:users!buyer_id(display_name), artisan:users!artisan_id(display_name), products(title, images:product_images(image_url))").eq("enquiry_id", enquiry_id).order("created_at", desc=True).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Quotation not found for this enquiry")
+        
+    quotation = res.data[0]
+    if quotation["buyer_id"] != current_user["id"] and quotation["artisan_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    rev_res = client.table("quotation_revisions").select("*").eq("quotation_id", quotation["id"]).order("version", desc=True).execute()
+    order_id = None
+    if quotation["status"] == "accepted":
+        ord_res = client.table("orders").select("id").eq("quotation_id", quotation["id"]).limit(1).execute()
+        if ord_res.data:
+            order_id = ord_res.data[0]["id"]
+
+    return {"quotation": quotation, "revisions": rev_res.data or [], "order_id": order_id}
+
 @router.get("/{id}")
 def get_quotation(id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
     client = get_authenticated_client(token)
-    res = client.table("quotations").select("*, buyer:users!buyer_id(display_name), artisan:users!artisan_id(display_name), products(title)").eq("id", id).execute()
+    res = client.table("quotations").select("*, buyer:users!buyer_id(display_name), artisan:users!artisan_id(display_name), products(title, images:product_images(image_url))").eq("id", id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Quotation not found")
         
@@ -257,4 +279,10 @@ def get_quotation(id: str, current_user: dict = Depends(get_current_user), token
         raise HTTPException(status_code=403, detail="Forbidden")
         
     rev_res = client.table("quotation_revisions").select("*").eq("quotation_id", id).order("version", desc=True).execute()
-    return {"quotation": quotation, "revisions": rev_res.data}
+    order_id = None
+    if quotation["status"] == "accepted":
+        ord_res = client.table("orders").select("id").eq("quotation_id", id).limit(1).execute()
+        if ord_res.data:
+            order_id = ord_res.data[0]["id"]
+
+    return {"quotation": quotation, "revisions": rev_res.data or [], "order_id": order_id}

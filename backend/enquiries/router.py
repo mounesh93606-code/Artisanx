@@ -108,8 +108,27 @@ def route_get_enquiry(enquiry_id: str, current_user: dict = Depends(get_current_
     if current_user["id"] == enquiry["artisan_id"] and enquiry["status"] == "new":
         client.table("buyer_enquiries").update({"status": "viewed"}).eq("id", enquiry_id).execute()
         enquiry["status"] = "viewed"
-        
+
+    # Attach quotation details if exists
+    try:
+        q_res = client.table("quotations").select("*, artisan:users!artisan_id(display_name)").eq("enquiry_id", enquiry_id).order("created_at", desc=True).limit(1).execute()
+        if q_res.data:
+            quote = q_res.data[0]
+            r_res = client.table("quotation_revisions").select("*").eq("quotation_id", quote["id"]).order("version", desc=True).execute()
+            quote["revisions"] = r_res.data or []
+            quote["latest_revision"] = r_res.data[0] if r_res.data else None
+            if quote["status"] == "accepted":
+                o_res = client.table("orders").select("id, display_id").eq("quotation_id", quote["id"]).limit(1).execute()
+                if o_res.data:
+                    quote["order_id"] = o_res.data[0]["id"]
+                    quote["order_display_id"] = o_res.data[0].get("display_id")
+            enquiry["quotation"] = quote
+    except Exception as e:
+        print(f"Notice: Failed to fetch quotation for enquiry {enquiry_id}: {e}")
+
     return enquiry
+
+
 
 @router.put("/{enquiry_id}/respond")
 def route_respond_enquiry(enquiry_id: str, req: EnquiryRespond, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)) -> dict:

@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 class QuotationCreate(BaseModel):
-    enquiry_id: UUID
+    enquiry_id: str
     quantity: int
     unit_price: float
     moq: Optional[int] = None
