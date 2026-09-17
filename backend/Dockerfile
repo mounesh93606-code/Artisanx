@@ -3,18 +3,12 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
-    U2NET_HOME=/root/.u2net \
-    MALLOC_ARENA_MAX=2 \
-    OMP_NUM_THREADS=1 \
-    OPENBLAS_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1 \
-    NUMEXPR_NUM_THREADS=1
+    MALLOC_ARENA_MAX=2
 
-# Install system libraries needed by OpenCV, Pillow, pydub (ffmpeg), and ONNX Runtime
+# Install system libraries needed by OpenCV, Pillow, and pydub (ffmpeg)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
-    libgomp1 \
     ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -24,9 +18,6 @@ WORKDIR /app
 # Install Python dependencies first for caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Pre-download lightweight u2netp ONNX model at build time if network is available
-RUN python -c "import onnxruntime; from rembg import new_session; new_session('u2netp')" || true
 
 # Copy backend application source
 COPY . .

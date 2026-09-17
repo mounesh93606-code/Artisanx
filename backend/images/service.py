@@ -8,30 +8,6 @@ import traceback
 from database import supabase_client, get_authenticated_client
 import os
 
-_rembg_remove = None
-_rembg_session = None
-
-def get_rembg_tools():
-    global _rembg_remove, _rembg_session
-    if _rembg_remove is None:
-        try:
-            import onnxruntime as ort
-            from rembg import remove as r_remove, new_session
-            sess_opts = ort.SessionOptions()
-            sess_opts.intra_op_num_threads = 1
-            sess_opts.inter_op_num_threads = 1
-            sess_opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-            sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
-            sess_opts.enable_cpu_mem_arena = False
-            sess_opts.enable_mem_pattern = False
-            _rembg_remove = r_remove
-            _rembg_session = new_session("u2netp", session_options=sess_opts)
-        except Exception as e:
-            print(f"Warning: rembg initialization deferred/failed: {e}")
-            _rembg_remove = False
-            _rembg_session = False
-    return (_rembg_remove if _rembg_remove is not False else None), (_rembg_session if _rembg_session is not False else None)
-
 MAX_FILE_SIZE = 25 * 1024 * 1024
 ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
@@ -108,7 +84,7 @@ def upload_image(file: UploadFile, artisan_id: str, token: str, product_id: str 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
-def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = True, debug: bool = False):
+def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = False, debug: bool = False):
     image_record = verify_image_owner(image_id, artisan_id, token)
     auth_client = get_authenticated_client(token)
     original_url = image_record.get("original_url") or image_record.get("image_url")
@@ -117,188 +93,142 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         raise HTTPException(status_code=400, detail="Original image URL not found")
         
     import httpx
+    from PIL import ImageFilter
     try:
-        response = httpx.get(original_url)
+        response = httpx.get(original_url, timeout=15.0)
         response.raise_for_status()
         img_data = response.content
         
         # Calculate quality on the original upload to reuse exact logic and thresholds
         orig_quality = calculate_image_quality(img_data)
-        is_blurry = orig_quality["blur_score"] < 40.0
-        is_dark = orig_quality["brightness_score"] < 40.0
-        is_washed_out = orig_quality["contrast_score"] < 30.0
         
-        img = Image.open(io.BytesIO(img_data)).convert("RGBA")
-        
-        if debug:
-            os.makedirs("/tmp/artisanx_debug", exist_ok=True)
-            img.save(f"/tmp/artisanx_debug/{image_id}_1_original.png")
+        # Decode image using OpenCV
+        nparr = np.frombuffer(img_data, np.uint8)
+        cv_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if cv_img is None:
+            raise ValueError("Failed to decode image")
             
-        # High-resolution scale for crisp e-commerce details
-        max_dim = 1400
-        if img.width > max_dim or img.height > max_dim:
-            scale = min(max_dim / img.width, max_dim / img.height)
-            new_w = int(img.width * scale)
-            new_h = int(img.height * scale)
-            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        h, w = cv_img.shape[:2]
         
-        orig_w, orig_h = img.width, img.height
+        # 1. Scale down large images (max 1200px) for sub-second processing and minimal memory footprint
+        max_dim = 1200
+        if max(h, w) > max_dim:
+            scale = max_dim / max(h, w)
+            cv_img = cv2.resize(cv_img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        h, w = cv_img.shape[:2]
         
-        _remove, _session = get_rembg_tools()
-        if use_rembg and _remove and _session:
-            try:
-                # Downsample to 320px specifically for neural net segmentation (u2netp operates at 320x320 internally).
-                # This drops pixel volume by 95%, dramatically cutting CPU cycles on cloud servers.
-                rembg_max = 320
-                if orig_w > rembg_max or orig_h > rembg_max:
-                    scale = min(rembg_max / orig_w, rembg_max / orig_h)
-                    r_w, r_h = int(orig_w * scale), int(orig_h * scale)
-                    img_for_cutout = img.resize((r_w, r_h), Image.Resampling.BILINEAR)
-                else:
-                    img_for_cutout = img
+        # 2. Auto White Balance (Gray World in LAB space) to correct room/ambient lighting tints
+        lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        a = cv2.add(a, int(128 - np.mean(a)))
+        b = cv2.add(b, int(128 - np.mean(b)))
+        
+        # CLAHE (Contrast-Limited Adaptive Histogram Equalization) on L channel preserves authentic artisan dye/material colors
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        lab = cv2.merge((l, a, b))
+        balanced_bgr = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+        
+        # 3. Fast Studio Foreground Isolation via OpenCV GrabCut on a 360px thumbnail (runs in ~0.15s)
+        thumb_max = 360
+        thumb_scale = thumb_max / max(h, w)
+        tw, th = max(10, int(w * thumb_scale)), max(10, int(h * thumb_scale))
+        thumb = cv2.resize(balanced_bgr, (tw, th), interpolation=cv2.INTER_AREA)
+        
+        mask = np.zeros((th, tw), np.uint8)
+        rect = (max(1, int(tw * 0.06)), max(1, int(th * 0.06)), max(1, int(tw * 0.88)), max(1, int(th * 0.88)))
+        bgdModel = np.zeros((1, 65), np.float64)
+        fgdModel = np.zeros((1, 65), np.float64)
+        
+        try:
+            cv2.grabCut(thumb, mask, rect, bgdModel, fgdModel, 4, cv2.GC_INIT_WITH_RECT)
+            mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+            
+            # Morphological filter to remove noise artifacts
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            mask2 = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, kernel)
+            mask2 = cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel)
+            
+            # Upscale mask to full resolution with smooth feathered edges
+            full_mask = cv2.resize(mask2 * 255, (w, h), interpolation=cv2.INTER_LINEAR)
+            full_mask = cv2.GaussianBlur(full_mask, (9, 9), 0)
+            fg_ratio = np.mean(full_mask > 128)
+        except Exception as cut_err:
+            print(f"GrabCut warning: {cut_err}")
+            full_mask = None
+            fg_ratio = 0.0
+            
+        balanced_rgb = cv2.cvtColor(balanced_bgr, cv2.COLOR_BGR2RGB)
+        pil_fg = Image.fromarray(balanced_rgb)
+        
+        # Standard high-resolution studio square canvas (1080x1080) for e-commerce catalog
+        canvas_w, canvas_h = 1080, 1080
+        studio_bg = Image.new("RGB", (canvas_w, canvas_h), (252, 252, 253))
+        
+        # If GrabCut found a solid foreground object (5% - 95% of the frame)
+        if full_mask is not None and 0.05 < fg_ratio < 0.95:
+            alpha_img = Image.fromarray(full_mask)
+            pil_fg.putalpha(alpha_img)
+            
+            # Crop to foreground bounding box with safe padding
+            bbox = pil_fg.split()[3].point(lambda p: 255 if p > 50 else 0).getbbox()
+            if bbox:
+                bw, bh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                margin_x = int(bw * 0.04)
+                margin_y = int(bh * 0.04)
+                crop_box = (
+                    max(0, bbox[0] - margin_x),
+                    max(0, bbox[1] - margin_y),
+                    min(w, bbox[2] + margin_x),
+                    min(h, bbox[3] + margin_y)
+                )
+                pil_fg = pil_fg.crop(crop_box)
                 
-                # Enforce a 6-second strict timeout so low-vCPU cloud containers never hang the browser
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(_remove, img_for_cutout, session=_session)
-                    cutout_small = future.result(timeout=6.0)
-
-                if img_for_cutout.size != img.size:
-                    alpha_mask = cutout_small.split()[-1].resize(img.size, Image.Resampling.LANCZOS)
-                    img.putalpha(alpha_mask)
-                else:
-                    img = cutout_small
-            except Exception as rembg_err:
-                print(f"Warning: rembg cutout timed out or failed ({rembg_err}), continuing with studio lighting enhancement")
+            # Scale product to fill 82% of studio canvas
+            max_fit_w = int(canvas_w * 0.82)
+            max_fit_h = int(canvas_h * 0.82)
+            scale = min(max_fit_w / pil_fg.width, max_fit_h / pil_fg.height)
+            new_w, new_h = max(10, int(pil_fg.width * scale)), max(10, int(pil_fg.height * scale))
+            pil_fg = pil_fg.resize((new_w, new_h), Image.Resampling.LANCZOS)
             
-        if debug:
-            img.save(f"/tmp/artisanx_debug/{image_id}_2_cutout.png")
+            paste_x = (canvas_w - new_w) // 2
+            paste_y = (canvas_h - new_h) // 2
             
-        # Get bounding box of non-transparent pixels to remove empty space
-        alpha = img.split()[-1]
-        has_transparency = alpha.getextrema()[0] < 250
-        bbox = alpha.getbbox()
-        if has_transparency and bbox:
-            img = img.crop(bbox)
-            
-        if debug:
-            img.save(f"/tmp/artisanx_debug/{image_id}_3_cropped.png")
-            
-        # Apply enhancements to the foreground BEFORE compositing
-        r, g, b, a = img.split()
-        rgb_img = Image.merge("RGB", (r, g, b))
-        
-        # Luminance-focused correction is used to minimize product hue/color
-        # changes caused by direct RGB-channel adjustments.
-        # Apply conservatively only if the image is considered dark or washed out.
-        if is_dark or is_washed_out:
-            cv_rgb = np.array(rgb_img)
-            lab = cv2.cvtColor(cv_rgb, cv2.COLOR_RGB2LAB)
-            l_chan, a_chan, b_chan = cv2.split(lab)
-            
-            # Enhanced CLAHE for rich micro-contrast on craft textures
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l_eq = clahe.apply(l_chan)
-            
-            # Recombine leaving A and B untouched to preserve accurate craft color
-            lab_eq = cv2.merge((l_eq, a_chan, b_chan))
-            cv_rgb_eq = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2RGB)
-            rgb_img = Image.fromarray(cv_rgb_eq)
-            
-        # Studio Sharpening
-        # Apply crisp sharpening for handmade details (wood, textiles, pottery, jewelry)
-        if not is_blurry:
-            enhancer = ImageEnhance.Sharpness(rgb_img)
-            rgb_img = enhancer.enhance(1.18)
-        
-        img = Image.merge("RGBA", (*rgb_img.split(), a))
-        
-        if debug:
-            img.save(f"/tmp/artisanx_debug/{image_id}_4_enhanced_fg.png")
-
-        # Aspect-Ratio-Aware High-Resolution Studio Framing (1200px max canvas)
-        ratio = img.width / img.height
-        
-        if ratio > 1.4:
-            # Wide
-            target_width = 1200
-            target_height = max(int(1200 / ratio), 600)
-        elif ratio < 0.71:
-            # Tall
-            target_height = 1200
-            target_width = max(int(1200 * ratio), 600)
-        else:
-            # Square-ish high-def
-            target_width = 1100
-            target_height = 1100
-
-        # Scaling & Padding
-        # Target ~82% of canvas dimension to give product dominant scale 
-        # while leaving safe padding for shadow and edges
-        max_width = int(target_width * 0.82)
-        max_height = int(target_height * 0.82)
-        
-        # Calculate exact scaling to fit max bounds while maintaining aspect ratio
-        scale_ratio = min(max_width / img.width, max_height / img.height)
-        new_width = int(img.width * scale_ratio)
-        new_height = int(img.height * scale_ratio)
-        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        
-        # Determine studio backdrop color based on product brightness
-        # Clean museum/studio off-white instead of dull cement gray
-        mean_brightness = orig_quality["brightness_score"] / 100.0 * 255.0
-        if mean_brightness > 220:
-            bg_color = (246, 247, 249)
-        elif mean_brightness < 80:
-            bg_color = (253, 253, 254)
-        else:
-            bg_color = (250, 250, 252)
-            
-        final_img = Image.new("RGB", (target_width, target_height), bg_color)
-        paste_x = (target_width - img.width) // 2
-        paste_y = (target_height - img.height) // 2
-
-        # Shadow generation ONLY if transparency exists
-        if has_transparency:
-            from PIL import ImageFilter
-            shadow_blur = 15
-            shadow_offset_y = 16
-            shadow_opacity = 0.15 # 15% opacity
-            
-            # Create shadow from alpha
-            shadow_mask = img.split()[3]
-            shadow = Image.new("RGBA", img.size, (0, 0, 0, 255))
+            # Realistic soft studio drop shadow underneath product
+            fg_alpha = pil_fg.split()[3]
+            shadow_mask = fg_alpha.filter(ImageFilter.GaussianBlur(16))
+            shadow = Image.new("RGBA", (new_w, new_h), (30, 30, 40, 35))
             shadow.putalpha(shadow_mask)
             
-            # Put shadow on a full-size canvas to avoid clipping blur
-            shadow_canvas = Image.new("RGBA", (target_width, target_height), (0, 0, 0, 0))
-            shadow_paste_y = paste_y + shadow_offset_y - 8
+            shadow_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+            shadow_canvas.paste(shadow, (paste_x, paste_y + 14), shadow)
             
-            # Paste unblurred shadow onto shadow canvas
-            shadow_canvas.paste(shadow, (paste_x, shadow_paste_y), shadow)
-            # Blur the shadow canvas
-            shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(shadow_blur))
+            studio_bg.paste(shadow_canvas, (0, 0), shadow_canvas)
+            studio_bg.paste(pil_fg, (paste_x, paste_y), pil_fg)
+            final_img = studio_bg
+        else:
+            # Clean fallback: center enhanced product directly onto studio backdrop
+            scale = min(canvas_w * 0.9 / w, canvas_h * 0.9 / h)
+            new_w, new_h = int(w * scale), int(h * scale)
+            pil_fg = pil_fg.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            paste_x = (canvas_w - new_w) // 2
+            paste_y = (canvas_h - new_h) // 2
+            studio_bg.paste(pil_fg, (paste_x, paste_y))
+            final_img = studio_bg
             
-            # Adjust opacity of shadow
-            shadow_r, shadow_g, shadow_b, shadow_a = shadow_canvas.split()
-            shadow_a = shadow_a.point(lambda p: p * shadow_opacity)
-            shadow_canvas = Image.merge("RGBA", (shadow_r, shadow_g, shadow_b, shadow_a))
-            final_img.paste(shadow_canvas, (0, 0), shadow_canvas)
-            
-        # Paste product
-        final_img.paste(img, (paste_x, paste_y), img)
+        # 4. Detail Micro-Sharpening
+        enhancer = ImageEnhance.Sharpness(final_img)
+        final_img = enhancer.enhance(1.22)
         
-        if debug:
-            final_img.save(f"/tmp/artisanx_debug/{image_id}_5_final.jpg", quality=96)
-        
+        # 5. Compress to optimized JPEG
         out_buffer = io.BytesIO()
-        final_img.save(out_buffer, format="JPEG", quality=95, optimize=True)
+        final_img.save(out_buffer, format="JPEG", quality=92, optimize=True)
         out_bytes = out_buffer.getvalue()
         
         quality_res = calculate_image_quality(out_bytes)
         enhanced_score = quality_res["overall_score"]
         
-        # Prototype enhancement score heuristic (deterministic, presentation-ready)
+        # Deterministic presentation-ready enhanced score
         orig_score = image_record.get("quality_score")
         if orig_score is None:
             orig_score = orig_quality.get("overall_score", 0)

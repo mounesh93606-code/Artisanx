@@ -9,8 +9,6 @@ requests
 httpx
 openai
 Pillow
-rembg[cpu]
-onnxruntime
 pydub
 qrcode
 python-jose[cryptography]
