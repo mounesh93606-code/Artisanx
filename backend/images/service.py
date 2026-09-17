@@ -15,9 +15,15 @@ def get_rembg_tools():
     global _rembg_remove, _rembg_session
     if _rembg_remove is None:
         try:
+            import onnxruntime as ort
             from rembg import remove as r_remove, new_session
+            sess_opts = ort.SessionOptions()
+            sess_opts.intra_op_num_threads = 1
+            sess_opts.inter_op_num_threads = 1
+            sess_opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+            sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
             _rembg_remove = r_remove
-            _rembg_session = new_session("u2netp")
+            _rembg_session = new_session("u2netp", session_options=sess_opts)
         except Exception as e:
             print(f"Warning: rembg initialization deferred/failed: {e}")
             _rembg_remove = False
@@ -136,14 +142,10 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         
         _remove, _session = get_rembg_tools()
         if use_rembg and _remove and _session:
-            # Added alpha matting to preserve thin structures (wicker, chains, etc.)
+            # Clean and fast u2netp cutout without high-memory alpha matting spike
             img = _remove(
                 img, 
-                session=_session,
-                alpha_matting=True,
-                alpha_matting_foreground_threshold=240,
-                alpha_matting_background_threshold=10,
-                alpha_matting_erode_size=10
+                session=_session
             )
             
         if debug:
@@ -305,12 +307,17 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         }).eq("id", image_id).execute()
         
         if res.data and len(res.data) > 0:
+            import gc
+            gc.collect()
             return res.data[0]
             
         raise HTTPException(status_code=500, detail="Failed to update image record")
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
+    finally:
+        import gc
+        gc.collect()
 
 def calculate_image_quality(img_data: bytes):
     nparr = np.frombuffer(img_data, np.uint8)
