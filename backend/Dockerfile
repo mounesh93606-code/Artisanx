@@ -3,6 +3,7 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
+    U2NET_HOME=/root/.u2net \
     MALLOC_ARENA_MAX=2 \
     OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
@@ -23,6 +24,9 @@ WORKDIR /app
 # Install Python dependencies first for caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download lightweight u2netp ONNX model at build time so Render never downloads it at runtime
+RUN mkdir -p /root/.u2net && python -c "import onnxruntime; from rembg import new_session; new_session('u2netp')"
 
 # Copy backend application source
 COPY . .

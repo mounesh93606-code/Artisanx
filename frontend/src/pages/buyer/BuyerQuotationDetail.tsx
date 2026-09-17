@@ -138,9 +138,11 @@ export default function BuyerQuotationDetail() {
                             <div>
                                 <h3 className="font-bold text-base text-stone-900">{quotation.products?.title || 'Handcrafted Item'}</h3>
                                 <p className="text-xs text-stone-500 mt-0.5">Artisan: <span className="font-semibold text-stone-700">{quotation.artisan?.display_name || 'Artisan'}</span></p>
-                                {quotation.agreed_variant && (
+                                {(quotation.variant_snapshot || quotation.agreed_variant) && (
                                     <p className="text-xs text-primary bg-primary/10 inline-block px-2 py-0.5 rounded mt-2 font-medium">
-                                        {quotation.agreed_variant}
+                                        {typeof (quotation.variant_snapshot || quotation.agreed_variant) === 'object'
+                                            ? Object.entries(quotation.variant_snapshot || quotation.agreed_variant).map(([k, v]) => `${k}: ${v}`).join(' • ')
+                                            : String(quotation.variant_snapshot || quotation.agreed_variant)}
                                     </p>
                                 )}
                             </div>

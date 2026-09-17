@@ -73,6 +73,7 @@ const optimizeImageForUpload = async (file: File): Promise<File> => {
 const Step1Photo = ({ t }: { t: any }) => {
     const { photos, addPhoto, deletePhoto, setPhotos, setStep } = useProductStore();
     const [isLoading, setIsLoading] = useState(false);
+    const [enhancingPhotoId, setEnhancingPhotoId] = useState<string | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [uploadPreview, setUploadPreview] = useState<string | null>(null);
     
@@ -156,28 +157,39 @@ const Step1Photo = ({ t }: { t: any }) => {
     };
 
     const enhancePhoto = async (id: string) => {
-        setIsLoading(true);
+        setEnhancingPhotoId(id);
+        setErrorMsg('');
         try {
             const { data } = await api.post(`/images/enhance/${id}`);
-            const newPhotos = photos.map(p => p.id === id ? { ...p, enhanced_url: data.enhanced_url, image_url: data.enhanced_url, enhanced_quality: true, enhanced_quality_score: data.enhanced_quality_score } : p);
+            const newPhotos = photos.map(p => p.id === id ? { 
+                ...p, 
+                enhanced_url: data.enhanced_url, 
+                image_url: data.enhanced_url, 
+                enhanced_quality: true, 
+                enhanced_quality_score: data.enhanced_quality_score 
+            } : p);
             setPhotos(newPhotos);
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error("Enhancement error:", error);
+            const detail = error?.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : (detail?.message || error?.message || "Enhancement failed. Please try again.");
+            setErrorMsg(message);
         } finally {
-            setIsLoading(false);
+            setEnhancingPhotoId(null);
         }
     };
 
     const toggleEnhancedQuality = async (id: string, useEnhanced: boolean) => {
-        setIsLoading(true);
+        setErrorMsg('');
         try {
             const { data } = await api.patch(`/images/${id}/use-enhanced?use_enhanced=${useEnhanced}`);
             const newPhotos = photos.map(p => p.id === id ? { ...p, enhanced_quality: useEnhanced, image_url: data.image_url } : p);
             setPhotos(newPhotos);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-        } finally {
-            setIsLoading(false);
+            const detail = error?.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : (error?.message || "Failed to switch photo version.");
+            setErrorMsg(message);
         }
     };
 
@@ -213,7 +225,14 @@ const Step1Photo = ({ t }: { t: any }) => {
                 </div>
             )}
 
-            {isLoading && !uploadPreview && (
+            {enhancingPhotoId && (
+                <div className="flex items-center justify-center gap-2 p-3 bg-secondary-container/50 border border-secondary/20 text-on-secondary-container rounded-xl text-sm font-semibold animate-pulse shadow-sm" data-guide-id="image-processing-loader">
+                    <Sparkles className="w-4 h-4 animate-spin text-secondary" />
+                    <span>Enhancing photo with AI studio cutout & lighting...</span>
+                </div>
+            )}
+
+            {isLoading && !uploadPreview && !enhancingPhotoId && (
                 <div className="text-center text-primary font-semibold animate-pulse" data-guide-id="image-processing-loader">
                     Uploading & Analyzing...
                 </div>
@@ -266,11 +285,20 @@ const Step1Photo = ({ t }: { t: any }) => {
                                 {!photo.enhanced_url && (
                                     <button 
                                         onClick={() => enhancePhoto(photo.id)}
-                                        className="text-xs flex items-center gap-1.5 bg-secondary-container text-on-secondary-container px-3 py-1.5 rounded-full font-bold hover:bg-secondary-fixed transition-colors active:scale-95"
-                                        disabled={isLoading}
+                                        className="text-xs flex items-center gap-1.5 bg-secondary-container text-on-secondary-container px-3 py-1.5 rounded-full font-bold hover:bg-secondary-fixed transition-colors active:scale-95 disabled:opacity-60"
+                                        disabled={isLoading || enhancingPhotoId !== null}
                                     >
-                                        <Sparkles className="w-3 h-3" />
-                                        {t.enhance}
+                                        {enhancingPhotoId === photo.id ? (
+                                            <>
+                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                <span>Enhancing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-3 h-3" />
+                                                {t.enhance}
+                                            </>
+                                        )}
                                     </button>
                                 )}
                                 <button

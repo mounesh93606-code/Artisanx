@@ -38,16 +38,25 @@ def create_quotation(req: QuotationCreate, current_user: dict = Depends(get_curr
         "buyer_id": str(enquiry["buyer_id"]),
         "artisan_id": str(current_user["id"]),
         "current_version": 1,
-        "agreed_variant": enquiry.get("requested_variant"),
+        "variant_snapshot": enquiry.get("requested_variant"),
         "status": "draft"
     }
 
-    
-    q_res = client.table("quotations").insert(q_data).execute()
+    try:
+        q_res = client.table("quotations").insert(q_data).execute()
+    except Exception as e:
+        # Fallback if variant_snapshot column name varies
+        if "variant_snapshot" in str(e) or "PGRST204" in str(e):
+            q_data.pop("variant_snapshot", None)
+            q_res = client.table("quotations").insert(q_data).execute()
+        else:
+            raise e
+
     if not q_res.data:
         raise HTTPException(status_code=500, detail="Failed to create quotation")
         
     quotation = q_res.data[0]
+    quotation["agreed_variant"] = quotation.get("variant_snapshot")
     
     # 2. Insert revision
     rev_data = {
@@ -141,12 +150,13 @@ def accept_quotation(id: str, current_user: dict = Depends(get_current_user), to
     if quotation.get("products") and quotation["products"].get("images"):
         img_url = quotation["products"]["images"][0]["image_url"] if len(quotation["products"]["images"]) > 0 else ""
         
+    variant_val = quotation.get("variant_snapshot") or quotation.get("agreed_variant")
     product_snapshot = {
         "product_id": quotation["product_id"],
         "title": quotation.get("products", {}).get("title", ""),
         "category": quotation.get("products", {}).get("category", ""),
         "image_url": img_url,
-        "variant": quotation.get("agreed_variant"),
+        "variant": variant_val,
         "agreed_unit_price": revision["unit_price"],
         "quantity": revision["quantity"]
     }
@@ -164,6 +174,7 @@ def accept_quotation(id: str, current_user: dict = Depends(get_current_user), to
         "total_order_value": revision["total_price"],
         "customization_details": revision.get("artisan_notes"),
         "product_snapshot": product_snapshot,
+        "variant_snapshot": variant_val,
         "expected_dispatch_date": revision.get("expected_dispatch_date")
     }
     
@@ -239,13 +250,19 @@ def list_artisan_quotations(current_user: dict = Depends(get_current_user), toke
     if current_user.get("role") != "artisan":
         raise HTTPException(status_code=403, detail="Forbidden")
     res = client.table("quotations").select("*, buyer:users!buyer_id(display_name), products(title, images:product_images(image_url))").eq("artisan_id", current_user["id"]).order("created_at", desc=True).execute()
-    return {"quotations": res.data}
+    data = res.data or []
+    for q in data:
+        q["agreed_variant"] = q.get("variant_snapshot")
+    return {"quotations": data}
 
 @router.get("/buyer")
 def list_buyer_quotations(current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
     client = get_authenticated_client(token)
     res = client.table("quotations").select("*, artisan:users!artisan_id(display_name), products(title, images:product_images(image_url))").eq("buyer_id", current_user["id"]).order("created_at", desc=True).execute()
-    return {"quotations": res.data}
+    data = res.data or []
+    for q in data:
+        q["agreed_variant"] = q.get("variant_snapshot")
+    return {"quotations": data}
 
 @router.get("/by-enquiry/{enquiry_id}")
 def get_quotation_by_enquiry(enquiry_id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
@@ -255,6 +272,7 @@ def get_quotation_by_enquiry(enquiry_id: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=404, detail="Quotation not found for this enquiry")
         
     quotation = res.data[0]
+    quotation["agreed_variant"] = quotation.get("variant_snapshot")
     if quotation["buyer_id"] != current_user["id"] and quotation["artisan_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
         
@@ -275,6 +293,7 @@ def get_quotation(id: str, current_user: dict = Depends(get_current_user), token
         raise HTTPException(status_code=404, detail="Quotation not found")
         
     quotation = res.data[0]
+    quotation["agreed_variant"] = quotation.get("variant_snapshot")
     if quotation["buyer_id"] != current_user["id"] and quotation["artisan_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
         

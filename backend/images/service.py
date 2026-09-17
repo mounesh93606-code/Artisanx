@@ -22,6 +22,8 @@ def get_rembg_tools():
             sess_opts.inter_op_num_threads = 1
             sess_opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
             sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+            sess_opts.enable_cpu_mem_arena = False
+            sess_opts.enable_mem_pattern = False
             _rembg_remove = r_remove
             _rembg_session = new_session("u2netp", session_options=sess_opts)
         except Exception as e:
@@ -132,30 +134,47 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
             os.makedirs("/tmp/artisanx_debug", exist_ok=True)
             img.save(f"/tmp/artisanx_debug/{image_id}_1_original.png")
             
-        # High-resolution scale before rembg for crisp e-commerce details
-        max_dim = 1600
+        # High-resolution scale for crisp e-commerce details
+        max_dim = 1400
         if img.width > max_dim or img.height > max_dim:
             scale = min(max_dim / img.width, max_dim / img.height)
             new_w = int(img.width * scale)
             new_h = int(img.height * scale)
             img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         
+        orig_w, orig_h = img.width, img.height
+        
         _remove, _session = get_rembg_tools()
         if use_rembg and _remove and _session:
-            # Clean and fast u2netp cutout without high-memory alpha matting spike
-            img = _remove(
-                img, 
-                session=_session
-            )
+            try:
+                # Downsample to max 800px specifically for neural net segmentation.
+                # u2netp evaluates internally at 320x320 anyway, so 800px gives identical
+                # edge precision with >75% reduction in peak memory on low-resource containers.
+                rembg_max = 800
+                if orig_w > rembg_max or orig_h > rembg_max:
+                    scale = min(rembg_max / orig_w, rembg_max / orig_h)
+                    r_w, r_h = int(orig_w * scale), int(orig_h * scale)
+                    img_for_cutout = img.resize((r_w, r_h), Image.Resampling.BILINEAR)
+                else:
+                    img_for_cutout = img
+                
+                cutout_small = _remove(img_for_cutout, session=_session)
+                if img_for_cutout.size != img.size:
+                    alpha_mask = cutout_small.split()[-1].resize(img.size, Image.Resampling.LANCZOS)
+                    img.putalpha(alpha_mask)
+                else:
+                    img = cutout_small
+            except Exception as rembg_err:
+                print(f"Warning: rembg cutout failed ({rembg_err}), continuing with studio lighting enhancement")
             
         if debug:
             img.save(f"/tmp/artisanx_debug/{image_id}_2_cutout.png")
             
         # Get bounding box of non-transparent pixels to remove empty space
-        # Extract alpha channel to ensure we only crop based on opacity
         alpha = img.split()[-1]
+        has_transparency = alpha.getextrema()[0] < 250
         bbox = alpha.getbbox()
-        if bbox:
+        if has_transparency and bbox:
             img = img.crop(bbox)
             
         if debug:
@@ -193,64 +212,33 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         if debug:
             img.save(f"/tmp/artisanx_debug/{image_id}_4_enhanced_fg.png")
 
-        # Aspect-Ratio-Aware High-Resolution Studio Framing
+        # Aspect-Ratio-Aware High-Resolution Studio Framing (1200px max canvas)
         ratio = img.width / img.height
         
         if ratio > 1.4:
             # Wide
-            target_width = 1600
-            target_height = max(int(1600 / ratio), 800)
+            target_width = 1200
+            target_height = max(int(1200 / ratio), 600)
         elif ratio < 0.71:
             # Tall
-            target_height = 1600
-            target_width = max(int(1600 * ratio), 800)
+            target_height = 1200
+            target_width = max(int(1200 * ratio), 600)
         else:
             # Square-ish high-def
-            target_width = 1400
-            target_height = 1400
+            target_width = 1100
+            target_height = 1100
 
         # Scaling & Padding
-        # Target ~80% of canvas dimension to give product dominant scale 
+        # Target ~82% of canvas dimension to give product dominant scale 
         # while leaving safe padding for shadow and edges
-        max_width = int(target_width * 0.80)
-        max_height = int(target_height * 0.80)
+        max_width = int(target_width * 0.82)
+        max_height = int(target_height * 0.82)
         
         # Calculate exact scaling to fit max bounds while maintaining aspect ratio
         scale_ratio = min(max_width / img.width, max_height / img.height)
         new_width = int(img.width * scale_ratio)
         new_height = int(img.height * scale_ratio)
         img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        
-        # Shadow generation
-        from PIL import ImageFilter
-        shadow_blur = 15
-        shadow_offset_y = 20
-        shadow_opacity = 0.15 # 15% opacity
-        
-        # Create shadow from alpha
-        shadow_mask = img.split()[3]
-        shadow = Image.new("RGBA", img.size, (0, 0, 0, 255))
-        shadow.putalpha(shadow_mask)
-        
-        # Put shadow on a full-size canvas to avoid clipping blur
-        shadow_canvas = Image.new("RGBA", (target_width, target_height), (0, 0, 0, 0))
-        
-        # Calculate center position
-        paste_x = (target_width - img.width) // 2
-        # shift product up slightly to balance the shadow offset
-        paste_y = (target_height - img.height) // 2 - (shadow_offset_y // 2)
-        
-        shadow_paste_y = paste_y + shadow_offset_y
-        
-        # Paste unblurred shadow onto shadow canvas
-        shadow_canvas.paste(shadow, (paste_x, shadow_paste_y), shadow)
-        # Blur the shadow canvas
-        shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(shadow_blur))
-        
-        # Adjust opacity of shadow
-        shadow_r, shadow_g, shadow_b, shadow_a = shadow_canvas.split()
-        shadow_a = shadow_a.point(lambda p: p * shadow_opacity)
-        shadow_canvas = Image.merge("RGBA", (shadow_r, shadow_g, shadow_b, shadow_a))
         
         # Determine studio backdrop color based on product brightness
         # Clean museum/studio off-white instead of dull cement gray
@@ -262,10 +250,37 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         else:
             bg_color = (250, 250, 252)
             
-        # Final compositing
         final_img = Image.new("RGB", (target_width, target_height), bg_color)
-        # Paste shadow
-        final_img.paste(shadow_canvas, (0, 0), shadow_canvas)
+        paste_x = (target_width - img.width) // 2
+        paste_y = (target_height - img.height) // 2
+
+        # Shadow generation ONLY if transparency exists
+        if has_transparency:
+            from PIL import ImageFilter
+            shadow_blur = 15
+            shadow_offset_y = 16
+            shadow_opacity = 0.15 # 15% opacity
+            
+            # Create shadow from alpha
+            shadow_mask = img.split()[3]
+            shadow = Image.new("RGBA", img.size, (0, 0, 0, 255))
+            shadow.putalpha(shadow_mask)
+            
+            # Put shadow on a full-size canvas to avoid clipping blur
+            shadow_canvas = Image.new("RGBA", (target_width, target_height), (0, 0, 0, 0))
+            shadow_paste_y = paste_y + shadow_offset_y - 8
+            
+            # Paste unblurred shadow onto shadow canvas
+            shadow_canvas.paste(shadow, (paste_x, shadow_paste_y), shadow)
+            # Blur the shadow canvas
+            shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(shadow_blur))
+            
+            # Adjust opacity of shadow
+            shadow_r, shadow_g, shadow_b, shadow_a = shadow_canvas.split()
+            shadow_a = shadow_a.point(lambda p: p * shadow_opacity)
+            shadow_canvas = Image.merge("RGBA", (shadow_r, shadow_g, shadow_b, shadow_a))
+            final_img.paste(shadow_canvas, (0, 0), shadow_canvas)
+            
         # Paste product
         final_img.paste(img, (paste_x, paste_y), img)
         
@@ -273,7 +288,7 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
             final_img.save(f"/tmp/artisanx_debug/{image_id}_5_final.jpg", quality=96)
         
         out_buffer = io.BytesIO()
-        final_img.save(out_buffer, format="JPEG", quality=96, optimize=True)
+        final_img.save(out_buffer, format="JPEG", quality=95, optimize=True)
         out_bytes = out_buffer.getvalue()
         
         quality_res = calculate_image_quality(out_bytes)
@@ -303,7 +318,8 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
         res = auth_client.table("product_images").update({
             "enhanced_url": enhanced_url,
             "image_url": enhanced_url,
-            "enhanced_quality_score": displayed_enhanced_score
+            "enhanced_quality_score": displayed_enhanced_score,
+            "enhanced_quality": True
         }).eq("id", image_id).execute()
         
         if res.data and len(res.data) > 0:

@@ -136,7 +136,9 @@ export default function EnquiryDetail() {
       setShowQuoteForm(false);
     } catch (err: any) {
       console.error("Failed to create quote", err);
-      alert(err.response?.data?.detail || "Failed to create quotation. Please check quantity and price.");
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : (detail?.message || err?.message || "Failed to create quotation. Please check quantity and price.");
+      alert(message);
     } finally {
       setSubmitting(false);
     }
