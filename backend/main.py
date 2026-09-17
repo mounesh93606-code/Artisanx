@@ -65,6 +65,7 @@ all_origins = list(dict.fromkeys(default_origins + custom_origins))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=all_origins,
+    allow_origin_regex=r"^https?:\/\/.*(\.vercel\.app|\.pages\.dev|\.onrender\.com|\.netlify\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,10 +77,10 @@ async def global_exception_handler(request, exc):
     logger.error(f"UNHANDLED EXCEPTION on {request.url}:\n{trace}")
     origin = request.headers.get("origin")
     headers = {}
-    if origin and (origin in all_origins or "*" in all_origins):
+    if origin:
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
-    elif not origin:
+    else:
         headers["Access-Control-Allow-Origin"] = "*"
     return JSONResponse(
         status_code=500, 

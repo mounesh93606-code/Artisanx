@@ -23,3 +23,15 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: BHASHINI_USER_ID
+        sync: false
+      - key: BHASHINI_API_KEY
+        sync: false
+      - key: BHASHINI_INFERENCE_API_KEY
+        sync: false
+      - key: BHASHINI_PIPELINE_ENDPOINT
+        value: https://dhruva-api.bhashini.gov.in/services/inference/pipeline
+      - key: BHASHINI_CONFIG_ENDPOINT
+        value: https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline
+      - key: BHASHINI_PIPELINE_ID
+        sync: false
