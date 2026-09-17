@@ -4,6 +4,8 @@ import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 
+import { LanguageSwitcher } from '../../components/layout/LanguageSwitcher';
+
 export default function FacilitatorHome() {
   const { token, user } = useAuthStore();
   const navigate = useNavigate();
@@ -44,7 +46,8 @@ export default function FacilitatorHome() {
             <span className="text-primary">🌿</span> ArtisanX
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           <button onClick={() => navigate('/facilitator/notifications')} className="relative p-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors">
             <Bell className="w-5 h-5" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-surface"></span>
@@ -114,8 +117,7 @@ export default function FacilitatorHome() {
              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
               <Package className="w-4 h-4" />
             </div>
-            {/* Using arbitrary number for active orders if not in stats, though we can calculate or pass from backend */}
-            <div className="text-xl font-bold text-stone-800 leading-none">28</div>
+            <div className="text-xl font-bold text-stone-800 leading-none">{stats?.active_orders ?? 0}</div>
             <div className="text-[10px] text-stone-500 font-bold text-center leading-tight">Active<br/>Orders</div>
           </div>
 
@@ -158,7 +160,9 @@ export default function FacilitatorHome() {
                       {act.action_type.replace(/_/g, ' ')}
                     </h4>
                     <p className="text-xs text-stone-500 line-clamp-1">{act.details || 'System update'}</p>
-                    <div className="text-[10px] text-stone-400 mt-1">Just now</div>
+                    <div className="text-[10px] text-stone-400 mt-1">
+                      {act.created_at ? new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                    </div>
                   </div>
                 </div>
               ))

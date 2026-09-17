@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Search, SlidersHorizontal, X, ShoppingBag } from 'lucide-react';
 import api from '../../lib/api';
 import ProductCard from '../../components/buyer/ProductCard';
 import { useTranslation } from 'react-i18next';
+import { useCartStore } from '../../stores/cartStore';
 
 export default function CataloguePage() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const { getItemCount } = useCartStore();
     const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -83,7 +86,7 @@ export default function CataloguePage() {
     return (
         <div className="w-full relative pb-20 bg-surface-container-lowest min-h-screen">
             <div className="bg-surface px-6 py-4 sticky top-0 z-10 shadow-sm flex flex-col gap-4">
-                <div className="flex gap-3">
+                <div className="flex gap-2 items-center">
                     <form onSubmit={handleSearchSubmit} className="relative flex-1">
                         <input 
                             type="text" 
@@ -97,8 +100,21 @@ export default function CataloguePage() {
                     <button 
                         onClick={() => setShowFilters(!showFilters)}
                         className={`p-3 rounded-xl border flex-shrink-0 transition-all ${showFilters ? 'bg-primary border-primary text-on-primary' : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary'}`}
+                        aria-label="Filter"
                     >
                         <SlidersHorizontal className="w-5 h-5" />
+                    </button>
+                    <button 
+                        onClick={() => navigate('/buyer/cart')}
+                        className="p-3 rounded-xl border border-outline-variant bg-surface text-stone-700 hover:border-primary flex-shrink-0 relative transition-all active:scale-95"
+                        aria-label="Shopping Cart"
+                    >
+                        <ShoppingBag className="w-5 h-5" />
+                        {getItemCount() > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">
+                                {getItemCount()}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>

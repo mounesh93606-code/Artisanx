@@ -220,9 +220,9 @@ export default function EnquiryDetail() {
                 <div className="text-xs text-stone-500 mt-1">{new Date(enq.responded_at || enq.updated_at).toLocaleString()}</div>
                 <div className="mt-2 bg-surface-container p-3 rounded-xl text-sm text-on-surface-variant">
                   <span className="font-bold block mb-1">
-                    {enq.artisan_response === 'interested' ? t('enquiry.opt_interested') || 'Interested' : ''}
-                    {enq.artisan_response === 'need_details' ? t('enquiry.opt_need_details') || 'Need More Details' : ''}
-                    {enq.artisan_response === 'cannot_fulfil' ? t('enquiry.opt_cannot_fulfil') || 'Cannot Fulfil' : ''}
+                    {(enq.artisan_response === 'interested' || enq.artisan_response === 'accepted') ? 'Accepted & Confirmed' : ''}
+                    {enq.artisan_response === 'need_details' ? (t('enquiry.opt_need_details') || 'Need More Details') : ''}
+                    {(enq.artisan_response === 'cannot_fulfil' || enq.artisan_response === 'rejected') ? (t('enquiry.opt_cannot_fulfil') || 'Cannot Fulfil / Rejected') : ''}
                   </span>
                   {enq.artisan_response_note && <span>{enq.artisan_response_note}</span>}
                 </div>
@@ -366,8 +366,8 @@ export default function EnquiryDetail() {
                   {displayResponse === 'interested' && <Check className="w-4 h-4" />}
                 </div>
                 <div>
-                  <div className={`font-bold ${displayResponse === 'interested' ? 'text-green-800' : 'text-stone-800'}`}>{t('enquiry.opt_interested') || 'Interested'}</div>
-                  <div className="text-xs text-stone-500 mt-0.5">{t('enquiry.opt_interested_desc') || 'You want to accept this order.'}</div>
+                  <div className={`font-bold ${displayResponse === 'interested' ? 'text-green-800' : 'text-stone-800'}`}>Accept & Confirm Request</div>
+                  <div className="text-xs text-stone-500 mt-0.5">Accept and confirm this order. The buyer will be able to proceed with purchase.</div>
                 </div>
               </div>
 
@@ -392,8 +392,8 @@ export default function EnquiryDetail() {
                   {displayResponse === 'cannot_fulfil' && <X className="w-4 h-4" />}
                 </div>
                 <div>
-                  <div className={`font-bold ${displayResponse === 'cannot_fulfil' ? 'text-red-800' : 'text-stone-800'}`}>{t('enquiry.opt_cannot_fulfil') || 'Cannot Fulfil'}</div>
-                  <div className="text-xs text-stone-500 mt-0.5">{t('enquiry.opt_cannot_fulfil_desc') || 'You are unable to take this order.'}</div>
+                  <div className={`font-bold ${displayResponse === 'cannot_fulfil' ? 'text-red-800' : 'text-stone-800'}`}>Cannot Fulfil / Reject</div>
+                  <div className="text-xs text-stone-500 mt-0.5">Decline this request if you are unable to take the order.</div>
                 </div>
               </div>
             </div>

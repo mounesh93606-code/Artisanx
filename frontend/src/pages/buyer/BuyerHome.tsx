@@ -1,16 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, ChevronRight, Clock, Heart, Star, Sparkles } from 'lucide-react';
+import { Search, ChevronRight, Clock, Heart, Star, Sparkles, ShoppingBag } from 'lucide-react';
 import api from '../../lib/api';
 import { useBuyerStore } from '../../stores/buyerStore';
+import { useCartStore } from '../../stores/cartStore';
 import ProductCard from '../../components/buyer/ProductCard';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
+import { LanguageSwitcher } from '../../components/layout/LanguageSwitcher';
 
 export default function BuyerHome() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { loadRecentlyViewed, recentlyViewed, savedProducts, fetchSavedProducts } = useBuyerStore();
+    const { getItemCount } = useCartStore();
     const [featured, setFeatured] = useState([]);
     const [newProducts, setNewProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,23 +50,41 @@ export default function BuyerHome() {
         else navigate(`/buyer/catalogue?category=${encodeURIComponent(cat)}`);
     };
 
+    const cartCount = getItemCount();
+
     return (
         <div className="w-full relative pb-24">
             {/* Header / Search Area */}
             <div className="bg-primary px-6 py-8 rounded-b-[2rem] text-on-primary shadow-md">
-                <div className="flex justify-between items-start mb-2">
-                    <h1 className="text-3xl font-bold">{t('buyer.discover')}</h1>
+                <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
-                        <Link to="/buyer/profile" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+                        <span className="material-symbols-outlined text-white text-2xl">handshake</span>
+                        <span className="font-bold tracking-tight text-lg text-white">ArtisanX</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <LanguageSwitcher />
+                        <Link to="/buyer/cart" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors relative" aria-label="Cart">
+                            <ShoppingBag size={18} className="text-on-primary" />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">
+                                    {cartCount}
+                                </span>
+                            )}
+                        </Link>
+                        <Link to="/buyer/profile" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors relative" aria-label="Saved">
                             <Heart size={18} className="text-on-primary" />
                             {savedProducts.length > 0 && (
-                                <span className="absolute top-0 right-10 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-primary"></span>
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-primary"></span>
                             )}
                         </Link>
                         <NotificationBell />
                     </div>
                 </div>
-                <p className="text-primary-container mb-6">{t('buyer.authentic')}</p>
+
+                <div className="mb-4">
+                    <h1 className="text-3xl font-bold">{t('buyer.discover')}</h1>
+                    <p className="text-primary-container mt-1">{t('buyer.authentic')}</p>
+                </div>
                 
                 <form onSubmit={handleSearch} className="relative">
                     <input 
@@ -89,7 +110,7 @@ export default function BuyerHome() {
                             onClick={() => handleCategory(cat)}
                             className="px-4 py-2 bg-surface border border-outline-variant rounded-full whitespace-nowrap text-sm font-bold text-on-surface-variant hover:border-primary hover:text-primary transition-all shadow-sm"
                         >
-                            {cat}
+                            {t('categories.' + cat.toLowerCase()) || cat}
                         </button>
                     ))}
                 </div>
@@ -100,7 +121,7 @@ export default function BuyerHome() {
                 <div className="mt-8">
                     <div className="px-6 flex justify-between items-end mb-4">
                         <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-stone-400" /> Recently Viewed
+                            <Clock className="w-5 h-5 text-stone-400" /> {t('buyer.recently_viewed')}
                         </h2>
                     </div>
                     <div className="flex overflow-x-auto hide-scrollbar px-6 pb-4 gap-4 snap-x">
@@ -127,10 +148,10 @@ export default function BuyerHome() {
             <div className="mt-6 px-6">
                 <div className="flex justify-between items-end mb-4">
                     <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-amber-500" /> Featured
+                        <Sparkles className="w-5 h-5 text-amber-500" /> {t('buyer.featured')}
                     </h2>
                     <Link to="/buyer/catalogue" className="text-sm font-bold text-primary flex items-center hover:underline">
-                        See All <ChevronRight className="w-4 h-4 ml-1" />
+                        {t('buyer.see_all')} <ChevronRight className="w-4 h-4 ml-1" />
                     </Link>
                 </div>
                 
@@ -151,10 +172,10 @@ export default function BuyerHome() {
             <div className="mt-8 px-6">
                 <div className="flex justify-between items-end mb-4">
                     <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-blue-500" /> New Arrivals
+                        <Star className="w-5 h-5 text-blue-500" /> {t('buyer.new_arrivals')}
                     </h2>
                     <Link to="/buyer/catalogue?sort_by=newest" className="text-sm font-bold text-primary flex items-center hover:underline">
-                        See All <ChevronRight className="w-4 h-4 ml-1" />
+                        {t('buyer.see_all')} <ChevronRight className="w-4 h-4 ml-1" />
                     </Link>
                 </div>
                 

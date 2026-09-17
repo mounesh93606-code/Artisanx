@@ -12,11 +12,13 @@ import Step5Pricing from '../../components/product/Step5Pricing';
 import Step6Inventory from '../../components/product/Step6Inventory';
 import Step7Publish from '../../components/product/Step7Publish';
 
+import { useTranslation } from 'react-i18next';
+
 const STEPS = [
   { id: 1, label: 'Photo' },
   { id: 2, label: 'Voice' },
   { id: 3, label: 'Details' },
-  { id: 4, label: 'Costs' },
+  { id: 4, label: 'Materials' },
   { id: 5, label: 'Price' },
   { id: 6, label: 'Inventory' },
   { id: 7, label: 'Publish' }
@@ -24,8 +26,9 @@ const STEPS = [
 
 const ProductCreate = () => {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
-    const lang = user?.preferred_language || 'en';
+    const { t: tGlobal } = useTranslation();
+    const { user, language } = useAuthStore();
+    const lang = language || user?.preferred_language || 'en';
     const t = pcTranslations[lang] || pcTranslations['en'];
     const { currentStep, reset } = useProductStore();
     const isRTL = lang === 'ur';
@@ -59,7 +62,7 @@ const ProductCreate = () => {
                             <span className="material-symbols-outlined text-[24px]">arrow_back</span>
                         </button>
                         <h1 className="font-bold text-lg text-on-surface tracking-tight truncate ml-1">
-                            Add Craft Product
+                            {tGlobal('products.add_product')}
                         </h1>
                     </div>
                 </div>
@@ -71,7 +74,7 @@ const ProductCreate = () => {
                     {/* Visual Step Progress Track */}
                     <section className="w-full pb-4">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-primary font-bold">Step {currentStep} of 7</span>
+                            <span className="text-sm text-primary font-bold">{tGlobal('guide.step_of', { current: currentStep, total: 7 })}</span>
                             <span className="text-sm text-on-surface-variant font-semibold">{STEPS[currentStep - 1]?.label}</span>
                         </div>
                         

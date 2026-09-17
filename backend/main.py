@@ -44,8 +44,15 @@ def _new_async_client_init(self, *args, **kwargs):
         kwargs['timeout'] = httpx.Timeout(30.0)
     _original_async_client_init(self, *args, **kwargs)
 httpx.AsyncClient.__init__ = _new_async_client_init
-cors_env = os.environ.get("CORS_ORIGINS", "")
+import logging
+logger = logging.getLogger("artisanx")
+from config import settings
+
+cors_env = settings.CORS_ORIGINS or os.environ.get("CORS_ORIGINS", "")
 custom_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+if settings.FRONTEND_URL and settings.FRONTEND_URL not in custom_origins:
+    custom_origins.append(settings.FRONTEND_URL.strip())
+
 default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -53,9 +60,11 @@ default_origins = [
     "capacitor://localhost",
     "https://localhost",
 ]
+all_origins = list(dict.fromkeys(default_origins + custom_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=default_origins + custom_origins,
+    allow_origins=all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,13 +73,18 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     trace = traceback.format_exc()
-    print(f"UNHANDLED EXCEPTION on {request.url}:", trace)
-    with open("error_log.txt", "a") as f:
-        f.write("="*40 + "\n" + str(request.url) + "\n" + trace + "\n\n")
+    logger.error(f"UNHANDLED EXCEPTION on {request.url}:\n{trace}")
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin and (origin in all_origins or "*" in all_origins):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    elif not origin:
+        headers["Access-Control-Allow-Origin"] = "*"
     return JSONResponse(
         status_code=500, 
         content={"detail": str(exc), "trace": trace},
-        headers={"Access-Control-Allow-Origin": "*"}
+        headers=headers
     )
 
 app.include_router(auth_router)

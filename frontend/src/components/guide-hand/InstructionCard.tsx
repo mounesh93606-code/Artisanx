@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface InstructionCardProps {
   text: string;
@@ -9,6 +10,7 @@ interface InstructionCardProps {
 }
 
 export default function InstructionCard({ text, stepNumber, totalSteps, targetRect }: InstructionCardProps) {
+  const { t } = useTranslation();
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [arrowClass, setArrowClass] = useState('');
 
@@ -73,7 +75,7 @@ export default function InstructionCard({ text, stepNumber, totalSteps, targetRe
 
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] font-bold uppercase tracking-wider text-on-primary-container bg-primary-container px-2 py-0.5 rounded-full">
-            Step {stepNumber} of {totalSteps}
+            {t('guide.step_of', { current: stepNumber, total: totalSteps })}
           </div>
         </div>
         

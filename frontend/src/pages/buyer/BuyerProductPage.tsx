@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Package, Clock, ShieldCheck, Mail, Heart, Share2, Copy, Check } from 'lucide-react';
+import { 
+    ArrowLeft, MapPin, Package, Clock, ShieldCheck, Mail, Heart, 
+    Share2, Copy, Check, ShoppingBag, AlertCircle, ShoppingCart, CheckCircle2 
+} from 'lucide-react';
 import axios from 'axios';
 import api from '../../lib/api';
 import ProductPassport from '../../components/product/ProductPassport';
 import EnquiryForm from '../../components/buyer/EnquiryForm';
 import { useTranslation } from 'react-i18next';
 import { useBuyerStore } from '../../stores/buyerStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useCartStore } from '../../stores/cartStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -15,6 +20,9 @@ export default function BuyerProductPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { savedProducts, toggleSavedProduct, addRecentlyViewed } = useBuyerStore();
+    const { user, token } = useAuthStore();
+    const { addItem, setDirectItem, getItemCount } = useCartStore();
+
     const [detail, setDetail] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,17 +30,35 @@ export default function BuyerProductPage() {
     const [showEnquiryForm, setShowEnquiryForm] = useState(false);
     const [showShareMenu, setShowShareMenu] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [buyerEnquiry, setBuyerEnquiry] = useState<any | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 2500);
+    };
+
+    const fetchBuyerEnquiry = async () => {
+        if (!token || user?.role !== 'buyer' || !id) return;
+        try {
+            const res = await api.get('/enquiries/buyer');
+            const enqs = res.data?.enquiries || [];
+            const match = enqs.find((e: any) => e.product_id === id);
+            if (match) {
+                setBuyerEnquiry(match);
+            }
+        } catch (e) {
+            console.error('Error fetching buyer enquiry', e);
+        }
+    };
 
     useEffect(() => {
         async function fetchDetail() {
             try {
-                // Using axios for public endpoint since catalogue detail is public
-                // but we might want to use authenticated api if we add buyer-specific pricing later
                 const response = await axios.get(`${API_URL}/products/catalogue/detail/${id}`);
                 const data = response.data;
                 setDetail(data);
                 
-                // Add to recently viewed
                 if (data.product) {
                     addRecentlyViewed({
                         id: data.product.id,
@@ -43,7 +69,6 @@ export default function BuyerProductPage() {
                     });
                 }
 
-                // Track view analytics in background
                 api.post('/analytics/track', {
                     product_id: id,
                     event_type: 'view'
@@ -58,11 +83,76 @@ export default function BuyerProductPage() {
         
         if (id) {
             fetchDetail();
+            fetchBuyerEnquiry();
         }
-    }, [id, addRecentlyViewed]);
+    }, [id, addRecentlyViewed, token, user]);
 
     const handleEnquiry = () => {
         setShowEnquiryForm(true);
+    };
+
+    const isEnquiryPending = buyerEnquiry && (
+        buyerEnquiry.status === 'new' ||
+        buyerEnquiry.status === 'viewed' ||
+        (buyerEnquiry.status === 'responded' && buyerEnquiry.artisan_response === 'need_details')
+    );
+
+    const isEnquiryConfirmed = buyerEnquiry && (
+        ((['accepted', 'responded'].includes(buyerEnquiry.status)) &&
+        (['accepted', 'interested'].includes(buyerEnquiry.artisan_response))) ||
+        buyerEnquiry.status === 'quote_sent' ||
+        buyerEnquiry.status === 'accepted'
+    );
+
+    const isEnquiryRejected = buyerEnquiry && (
+        buyerEnquiry.status === 'rejected' ||
+        ['cannot_fulfil', 'rejected'].includes(buyerEnquiry.artisan_response)
+    );
+
+    const handleAddToCart = () => {
+        if (!detail?.product) return;
+        const prod = detail.product;
+        const agreedQty = buyerEnquiry?.quantity || prod.moq || 1;
+        addItem({
+            id: prod.id,
+            productId: prod.id,
+            title: prod.title,
+            price: Number(prod.price),
+            image: mainImages[0]?.image_url || '',
+            artisanId: detail.artisan?.id || prod.artisan_id,
+            artisanName: detail.artisan?.artisan_name || 'Artisan',
+            quantity: agreedQty,
+            moq: prod.moq || 1,
+            stockQuantity: prod.stock_quantity,
+            isMadeToOrder: prod.is_made_to_order,
+            enquiryId: buyerEnquiry?.id,
+            enquiryConfirmed: !!isEnquiryConfirmed,
+            customization: buyerEnquiry?.customisation_request
+        });
+        showToast('Added to Cart!');
+    };
+
+    const handleBuyNow = () => {
+        if (!detail?.product) return;
+        const prod = detail.product;
+        const agreedQty = buyerEnquiry?.quantity || prod.moq || 1;
+        setDirectItem({
+            id: `${prod.id}_direct`,
+            productId: prod.id,
+            title: prod.title,
+            price: Number(prod.price),
+            image: mainImages[0]?.image_url || '',
+            artisanId: detail.artisan?.id || prod.artisan_id,
+            artisanName: detail.artisan?.artisan_name || 'Artisan',
+            quantity: agreedQty,
+            moq: prod.moq || 1,
+            stockQuantity: prod.stock_quantity,
+            isMadeToOrder: prod.is_made_to_order,
+            enquiryId: buyerEnquiry?.id,
+            enquiryConfirmed: !!isEnquiryConfirmed,
+            customization: buyerEnquiry?.customisation_request
+        });
+        navigate('/buyer/checkout?direct=true');
     };
 
     if (loading) {
@@ -86,7 +176,15 @@ export default function BuyerProductPage() {
     const isSaved = savedProducts.some(p => p.id === product.id);
 
     return (
-        <div className="w-full relative pb-32 bg-surface-container-lowest min-h-screen">
+        <div className="w-full relative pb-36 bg-surface-container-lowest min-h-screen">
+            {/* Top Notification Toast */}
+            {toastMessage && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    {toastMessage}
+                </div>
+            )}
+
             {/* Top Nav */}
             <div className="absolute top-4 left-4 right-4 z-10 flex justify-between pt-safe">
                 <button 
@@ -97,6 +195,20 @@ export default function BuyerProductPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="flex gap-2">
+                    {/* Cart Button with Count Badge */}
+                    <button 
+                        onClick={() => navigate('/buyer/cart')} 
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm transition-all active:scale-95 relative"
+                        aria-label="View Cart"
+                    >
+                        <ShoppingBag className="w-5 h-5 text-stone-600" />
+                        {getItemCount() > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow">
+                                {getItemCount()}
+                            </span>
+                        )}
+                    </button>
+
                     <div className="relative">
                         <button 
                             onClick={() => setShowShareMenu(!showShareMenu)}
@@ -186,6 +298,55 @@ export default function BuyerProductPage() {
                     </div>
                     <div className="text-2xl font-bold text-primary">₹{product.price}</div>
                 </div>
+
+                {/* Enquiry Status Banner (Business Rule Verification) */}
+                {isEnquiryPending && (
+                    <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
+                        <div className="flex items-center gap-2 font-bold text-sm mb-1">
+                            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                            Waiting for Artisan Confirmation
+                        </div>
+                        <p className="text-xs text-amber-800 leading-relaxed mb-2">
+                            Your enquiry for {buyerEnquiry.quantity} units has been submitted. The artisan is reviewing your request. Purchasing will be unlocked once confirmed.
+                        </p>
+                        <button 
+                            onClick={() => navigate(`/buyer/enquiry/${buyerEnquiry.id}`)}
+                            className="text-xs font-bold text-amber-900 underline hover:text-amber-950"
+                        >
+                            View Enquiry Discussion →
+                        </button>
+                    </div>
+                )}
+
+                {isEnquiryRejected && (
+                    <div className="mt-4 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-900">
+                        <div className="flex items-center gap-2 font-bold text-sm mb-1">
+                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                            Artisan Did Not Confirm This Request
+                        </div>
+                        <p className="text-xs text-red-800 leading-relaxed mb-2">
+                            The artisan was unable to fulfil this custom requirement. You may submit a new enquiry with updated specifications.
+                        </p>
+                        <button 
+                            onClick={handleEnquiry}
+                            className="px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-xl shadow-sm hover:bg-red-700"
+                        >
+                            Send New Enquiry
+                        </button>
+                    </div>
+                )}
+
+                {isEnquiryConfirmed && (
+                    <div className="mt-4 p-4 rounded-2xl bg-green-50 border border-green-200 text-green-900">
+                        <div className="flex items-center gap-2 font-bold text-sm mb-1">
+                            <ShieldCheck className="w-4 h-4 text-green-600 shrink-0" />
+                            Artisan Confirmed Your Request!
+                        </div>
+                        <p className="text-xs text-green-800 leading-relaxed">
+                            The artisan has confirmed your requirement for {buyerEnquiry.quantity} units. You can now add to cart or buy now directly!
+                        </p>
+                    </div>
+                )}
                 
                 <p className="text-stone-600 mt-4 leading-relaxed whitespace-pre-wrap">{product.description}</p>
                 
@@ -193,23 +354,23 @@ export default function BuyerProductPage() {
                     <div className="flex items-center gap-3">
                         <Package className="w-5 h-5 text-stone-400" />
                         <div>
-                            <div className="text-xs text-stone-500">MOQ</div>
-                            <div className="font-bold text-stone-800">{product.moq || 1} units</div>
+                            <div className="text-xs text-stone-500">{t('passport.moq', { defaultValue: 'MOQ' })}</div>
+                            <div className="font-bold text-stone-800">{product.moq || 1} {t('cart.items', { defaultValue: 'units' })}</div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <Clock className="w-5 h-5 text-stone-400" />
                         <div>
-                            <div className="text-xs text-stone-500">Lead Time</div>
-                            <div className="font-bold text-stone-800">{product.lead_time_days || 0} days</div>
+                            <div className="text-xs text-stone-500">{t('passport.lead_time', { defaultValue: 'Lead Time' })}</div>
+                            <div className="font-bold text-stone-800">{product.lead_time_days || 0} {t('products.lead_time', { defaultValue: 'days' })}</div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-5 h-5 flex items-center justify-center rounded bg-stone-100 text-stone-500 text-xs font-bold">Qty</div>
                         <div>
-                            <div className="text-xs text-stone-500">Available</div>
+                            <div className="text-xs text-stone-500">{t('passport.stock', { defaultValue: 'Available' })}</div>
                             <div className="font-bold text-stone-800">
-                                {product.is_made_to_order ? 'Made to Order' : `${product.stock_quantity || 0} units`}
+                                {product.is_made_to_order ? t('products.made_to_order', { defaultValue: 'Made to Order' }) : `${product.stock_quantity || 0} ${t('cart.items', { defaultValue: 'units' })}`}
                             </div>
                         </div>
                     </div>
@@ -217,10 +378,10 @@ export default function BuyerProductPage() {
 
                 {(product.materials || product.dimensions || product.care_instructions) && (
                     <div className="mt-6 space-y-4">
-                        <h3 className="font-bold text-stone-800 text-lg">Product Details</h3>
+                        <h3 className="font-bold text-stone-800 text-lg">{t('passport.product_details', { defaultValue: 'Product Details' })}</h3>
                         {product.materials && product.materials.list && product.materials.list.length > 0 && (
                             <div>
-                                <div className="text-sm font-bold text-stone-700 mb-1">{t('products.materials')}</div>
+                                <div className="text-sm font-bold text-stone-700 mb-1">{t('passport.materials', { defaultValue: 'Materials' })}</div>
                                 <div className="flex flex-wrap gap-2">
                                     {product.materials.list.map((m: any, i: number) => (
                                         <span key={i} className="px-3 py-1 bg-white border border-stone-200 rounded-full text-xs text-stone-600">{m.name}</span>
@@ -230,13 +391,13 @@ export default function BuyerProductPage() {
                         )}
                         {product.dimensions && (
                             <div>
-                                <div className="text-sm font-bold text-stone-700">Dimensions</div>
+                                <div className="text-sm font-bold text-stone-700">{t('product_guidance.size', { defaultValue: 'Dimensions' })}</div>
                                 <div className="text-sm text-stone-600">{product.dimensions}</div>
                             </div>
                         )}
                         {product.care_instructions && (
                             <div>
-                                <div className="text-sm font-bold text-stone-700">Care Instructions</div>
+                                <div className="text-sm font-bold text-stone-700">{t('passport.care', { defaultValue: 'Care Instructions' })}</div>
                                 <div className="text-sm text-stone-600">{product.care_instructions}</div>
                             </div>
                         )}
@@ -245,7 +406,7 @@ export default function BuyerProductPage() {
 
                 {artisan && (
                     <div className="mt-8 bg-surface border border-outline-variant rounded-3xl p-5 shadow-sm">
-                        <h3 className="font-bold text-on-surface mb-4 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /> Artisan Profile</h3>
+                        <h3 className="font-bold text-on-surface mb-4 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /> {t('common.profile', { defaultValue: 'Artisan Profile' })}</h3>
                         <div 
                             className="flex gap-4 items-center mb-4 cursor-pointer hover:bg-stone-50 p-2 -mx-2 rounded-xl transition-colors"
                             onClick={() => navigate(`/buyer/artisan/${artisan.id}`)}
@@ -254,12 +415,12 @@ export default function BuyerProductPage() {
                                 {artisan.profile_photo_url ? (
                                     <img src={artisan.profile_photo_url} alt={artisan.artisan_name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs text-center leading-tight">No Photo</div>
+                                    <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs text-center leading-tight">{t('common.no_image', { defaultValue: 'No Photo' })}</div>
                                 )}
                             </div>
                             <div>
                                 <h4 className="font-bold text-stone-800">{artisan.artisan_name}</h4>
-                                <div className="text-sm text-stone-500 flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {artisan.location || 'Unknown Location'}</div>
+                                <div className="text-sm text-stone-500 flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {artisan.location || 'Craft Cluster'}</div>
                                 <div className="text-xs text-on-secondary-container font-bold mt-1 bg-secondary-container px-2 py-0.5 rounded w-max">{artisan.craft_type || t('auth.artisan')}</div>
                             </div>
                         </div>
@@ -271,7 +432,7 @@ export default function BuyerProductPage() {
 
                 {passport && (
                     <div className="mt-8">
-                        <h3 className="font-bold text-stone-800 text-lg mb-4">Product Passport</h3>
+                        <h3 className="font-bold text-stone-800 text-lg mb-4">{t('passport.authenticity', { defaultValue: 'Product Passport' })}</h3>
                         <ProductPassport 
                             passportData={passport.passport_data} 
                             qrCodeUrl={passport.qr_code_url} 
@@ -282,20 +443,65 @@ export default function BuyerProductPage() {
                 )}
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto p-4 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex gap-3 z-40 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-                <button 
-                    onClick={handleEnquiry} 
-                    className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                >
-                    <Mail className="w-5 h-5" /> Request Enquiry
-                </button>
+            {/* Bottom Action Bar */}
+            <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto p-4 bg-surface/95 backdrop-blur-md border-t border-outline-variant flex gap-3 z-40 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+                {isEnquiryConfirmed ? (
+                    <>
+                        <button 
+                            onClick={handleAddToCart}
+                            className="flex-1 min-h-[48px] py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded-full font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        >
+                            <ShoppingCart className="w-4 h-4" /> {t('common.add_to_cart', { defaultValue: 'Add to Cart' })}
+                        </button>
+                        <button 
+                            onClick={handleBuyNow}
+                            className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        >
+                            {t('common.buy_now', { defaultValue: 'Buy Now' })}
+                        </button>
+                    </>
+                ) : isEnquiryPending ? (
+                    <button 
+                        onClick={() => navigate(`/buyer/enquiry/${buyerEnquiry.id}`)}
+                        className="flex-1 min-h-[48px] py-3 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-full font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    >
+                        <Clock className="w-4 h-4 text-amber-700" /> {t('enquiry.status_responded', { defaultValue: 'Waiting for Artisan Confirmation' })}
+                    </button>
+                ) : isEnquiryRejected ? (
+                    <button 
+                        onClick={handleEnquiry}
+                        className="flex-1 min-h-[48px] py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 rounded-full font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    >
+                        <Mail className="w-4 h-4" /> {t('buyer.send_enquiry', { defaultValue: 'Send New Enquiry' })}
+                    </button>
+                ) : (
+                    <>
+                        <button 
+                            onClick={handleEnquiry} 
+                            className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        >
+                            <Mail className="w-5 h-5" /> {t('buyer.send_enquiry', { defaultValue: 'Request Enquiry' })}
+                        </button>
+                        {!product.is_made_to_order && (product.stock_quantity === null || product.stock_quantity > 0) && (
+                            <button 
+                                onClick={handleAddToCart}
+                                className="flex-1 min-h-[48px] py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded-full font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            >
+                                <ShoppingCart className="w-4 h-4" /> {t('common.add_to_cart', { defaultValue: 'Add to Cart' })}
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
 
             {showEnquiryForm && (
                 <EnquiryForm 
                     productId={product.id} 
                     moq={product.moq || 1} 
-                    onClose={() => setShowEnquiryForm(false)} 
+                    onClose={() => {
+                        setShowEnquiryForm(false);
+                        fetchBuyerEnquiry();
+                    }} 
                 />
             )}
         </div>

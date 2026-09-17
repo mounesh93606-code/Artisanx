@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'ArtisanX',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    cleartext: false
   }
 };
 

@@ -20,10 +20,9 @@ const languages = [
 ];
 
 const LoginPage: React.FC = () => {
-  const { t } = useTranslation();
-  const { user, isAuthenticated, isLoading, error, clearError, sendOtp, verifyOtp, loginWithEmail, registerWithEmail } = useAuthStore();
+  const { t, i18n } = useTranslation();
+  const { user, isAuthenticated, isLoading, error, clearError, sendOtp, verifyOtp, loginWithEmail, registerWithEmail, language, setLanguage } = useAuthStore();
   const navigate = useNavigate();
-  const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'en');
   const [tab, setTab] = useState<'phone' | 'email'>('phone');
   
   // Phone state
@@ -38,14 +37,12 @@ const LoginPage: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [regSuccessMessage, setRegSuccessMessage] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem('app_lang', lang);
-    if (lang === 'ur') {
-      document.body.setAttribute('dir', 'rtl');
-    } else {
-      document.body.removeAttribute('dir');
-    }
-  }, [lang]);
+  const handleLangChange = (newLang: string) => {
+    setLanguage(newLang);
+    i18n.changeLanguage(newLang);
+    document.documentElement.dir = newLang === 'ur' ? 'rtl' : 'ltr';
+    document.documentElement.lang = newLang;
+  };
 
   useEffect(() => {
     let interval: any;
@@ -107,7 +104,7 @@ const LoginPage: React.FC = () => {
           </div>
         </header>
         <main className="flex-1 px-6 pb-12 w-full max-w-md mx-auto">
-          <RoleSelect lang={lang} />
+          <RoleSelect lang={language} />
         </main>
       </div>
     );
@@ -126,9 +123,10 @@ const LoginPage: React.FC = () => {
             <span className="font-bold text-on-surface tracking-tight text-lg">ArtisanX</span>
           </div>
           <select 
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className="bg-surface-container-lowest shadow-sm border border-outline-variant/30 text-on-surface text-sm rounded-full focus:ring-1 focus:ring-primary focus:border-primary py-2.5 px-4 font-semibold appearance-none"
+            value={language}
+            onChange={(e) => handleLangChange(e.target.value)}
+            className="bg-surface-container-lowest shadow-sm border border-outline-variant/30 text-on-surface text-sm rounded-full focus:ring-1 focus:ring-primary focus:border-primary py-2.5 px-4 font-semibold appearance-none cursor-pointer"
+            aria-label="Select Language"
           >
             {languages.map(l => (
               <option key={l.code} value={l.code}>{l.native}</option>
@@ -139,12 +137,12 @@ const LoginPage: React.FC = () => {
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary-fixed text-on-secondary-fixed">
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Rural Craft Platform</span>
+            <span className="text-xs font-bold uppercase tracking-wider">{t('auth.rural_craft_platform')}</span>
           </div>
           <h1 className="text-4xl font-extrabold text-on-surface tracking-tight leading-[1.1]">
-            Your Craft. <br />
-            <span className="text-primary">Your Story.</span> <br />
-            Your Market.
+            {t('auth.your_craft')} <br />
+            <span className="text-primary">{t('auth.your_story')}</span> <br />
+            {t('auth.your_market')}
           </h1>
         </div>
       </header>
@@ -156,13 +154,13 @@ const LoginPage: React.FC = () => {
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${tab === 'phone' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
               onClick={() => setTab('phone')}
             >
-              Phone
+              {t('auth.phone')}
             </button>
             <button 
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${tab === 'email' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
               onClick={() => setTab('email')}
             >
-              Email
+              {t('auth.email')}
             </button>
           </div>
 
@@ -185,7 +183,7 @@ const LoginPage: React.FC = () => {
                 {!otpSent ? (
                   <form onSubmit={handleSendOtp} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
+                      <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.phone')}</label>
                       <div className="flex rounded-xl overflow-hidden border border-outline-variant bg-surface-container-lowest focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors">
                         <span className="inline-flex items-center px-4 bg-surface-container-low text-on-surface-variant text-sm font-bold border-r border-outline-variant">
                           +91
@@ -195,18 +193,18 @@ const LoginPage: React.FC = () => {
                           value={phone.replace('+91', '')} 
                           onChange={(e) => setPhone(e.target.value)}
                           className="flex-1 block w-full min-w-0 sm:text-sm p-4 border-0 focus:ring-0 bg-transparent text-on-surface font-medium"
-                          placeholder="Enter your number"
+                          placeholder={t('auth.enter_phone')}
                         />
                       </div>
                     </div>
                     <Button type="submit" disabled={isLoading || !phone} fullWidth>
-                      {isLoading ? 'Sending...' : t('auth.send_otp')}
+                      {isLoading ? t('common.loading') : t('auth.send_otp')}
                     </Button>
                   </form>
                 ) : (
                   <form onSubmit={handleVerifyOtp} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Enter 6-digit OTP</label>
+                      <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.enter_otp')}</label>
                       <Input 
                         type="text" 
                         maxLength={6}
@@ -217,14 +215,14 @@ const LoginPage: React.FC = () => {
                       />
                     </div>
                     <Button type="submit" disabled={isLoading || otp.length !== 6} fullWidth>
-                      {isLoading ? 'Verifying...' : 'Verify'}
+                      {isLoading ? t('common.loading') : t('auth.verify')}
                     </Button>
                     <div className="text-center mt-6">
                       {timer > 0 ? (
-                        <p className="text-sm font-medium text-on-surface-variant">Resend OTP in {timer}s</p>
+                        <p className="text-sm font-medium text-on-surface-variant">{t('auth.resend_otp')} in {timer}s</p>
                       ) : (
                         <button type="button" onClick={handleSendOtp} className="text-sm text-primary font-bold hover:underline">
-                          Resend OTP
+                          {t('auth.resend_otp')}
                         </button>
                       )}
                     </div>
@@ -236,21 +234,21 @@ const LoginPage: React.FC = () => {
             {tab === 'email' && (
               <form onSubmit={handleEmailAuth} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-2">Email</label>
+                  <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.email')}</label>
                   <Input 
                     type="email" 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder={t('auth.email')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-on-surface mb-2">Password</label>
+                  <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.password')}</label>
                   <Input 
                     type="password" 
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.password')}
                   />
                 </div>
                 <div className="pt-2">

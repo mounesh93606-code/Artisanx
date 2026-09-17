@@ -48,14 +48,14 @@ export default function GuideControls({
             <button 
               onClick={onReplay}
               className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/20 rounded-full transition-all"
-              aria-label="Replay Step"
+              aria-label={t('guide.replay')}
             >
               <RotateCcw className="w-4 h-4" />
             </button>
             <button 
               onClick={onPause}
               className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/20 rounded-full transition-all"
-              aria-label={isPaused ? "Play" : "Pause"}
+              aria-label={isPaused ? t('guide.play') : t('guide.pause')}
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
             </button>

@@ -70,29 +70,48 @@ export default function ProductReviewQueue() {
         </div>
         
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Pending', 'In Review', 'Approved'].map(tab => (
-            <button 
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all ${
-                filter === tab 
-                  ? 'bg-primary text-on-primary' 
-                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-              }`}
-            >
-              {tab} {tab === 'Pending' && `(${issues.length})`}
-            </button>
-          ))}
+          {['Pending', 'In Review', 'Approved'].map(tab => {
+            const count = tab === 'Pending' 
+              ? issues.filter(p => (p.review_status || 'pending') === 'pending').length
+              : tab === 'In Review'
+              ? issues.filter(p => p.review_status === 'needs_changes').length
+              : issues.filter(p => p.review_status === 'approved').length;
+            return (
+              <button 
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all ${
+                  filter === tab 
+                    ? 'bg-primary text-on-primary' 
+                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                {tab} ({count})
+              </button>
+            );
+          })}
         </div>
       </div>
       
       <div className="p-6 space-y-4">
         {loading ? (
            <div className="flex justify-center p-8"><div className="animate-pulse w-8 h-8 rounded-full bg-stone-300"></div></div>
-        ) : issues.length === 0 ? (
-          <div className="text-center text-stone-500 p-8">No products to review.</div>
+        ) : issues.filter(p => {
+            const st = p.review_status || 'pending';
+            if (filter === 'Pending') return st === 'pending';
+            if (filter === 'In Review') return st === 'needs_changes';
+            if (filter === 'Approved') return st === 'approved';
+            return true;
+          }).length === 0 ? (
+          <div className="text-center text-stone-500 p-8">No products in this queue.</div>
         ) : (
-          issues.map((product, i) => (
+          issues.filter(p => {
+            const st = p.review_status || 'pending';
+            if (filter === 'Pending') return st === 'pending';
+            if (filter === 'In Review') return st === 'needs_changes';
+            if (filter === 'Approved') return st === 'approved';
+            return true;
+          }).map((product, i) => (
             <div 
               key={product.product_id || i}
               onClick={() => setSelectedProduct(product)}
@@ -113,8 +132,12 @@ export default function ProductReviewQueue() {
                 <div className="font-bold text-stone-700 text-sm mb-2">₹ {product.price || '---'}</div>
                 
                 <div className="flex items-center justify-between mt-auto">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-bold tracking-wide uppercase">
-                    Pending
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${
+                    product.review_status === 'approved' ? 'bg-green-100 text-green-700' :
+                    product.review_status === 'needs_changes' ? 'bg-amber-100 text-amber-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {product.review_status === 'needs_changes' ? 'In Review' : (product.review_status || 'Pending')}
                   </span>
                   <div className="text-stone-300 group-hover:text-primary transition-colors">
                     <ChevronRight className="w-5 h-5" />

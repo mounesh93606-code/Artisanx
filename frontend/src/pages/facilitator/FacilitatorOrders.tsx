@@ -98,13 +98,67 @@ export default function FacilitatorOrders() {
                     <span className="font-semibold">Artisan:</span> {order.artisan?.display_name || 'Unknown'}
                   </div>
                   <div className="text-sm text-stone-600">
-                    Expected Dispatch: {new Date(order.expected_dispatch_date).toLocaleDateString()}
+                    Expected Dispatch: {order.expected_dispatch_date ? new Date(order.expected_dispatch_date).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
               ))
             )}
           </div>
         </section>
+
+        {/* Cancellation Requests */}
+        {orders.cancellation_requests && orders.cancellation_requests.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2 text-orange-600">
+              <Package className="w-5 h-5" /> Cancellation Requests ({orders.cancellation_requests.length})
+            </h2>
+            <div className="space-y-4">
+              {orders.cancellation_requests.map((order: any) => (
+                <div key={order.id} className="bg-surface p-4 rounded-3xl shadow-sm border border-orange-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-bold text-stone-800">Order #{order.id.slice(0, 8)}</div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 uppercase">
+                      Cancellation Requested
+                    </span>
+                  </div>
+                  <div className="text-sm text-stone-600 mb-1">
+                    <span className="font-semibold">Artisan:</span> {order.artisan?.display_name || 'Unknown'}
+                  </div>
+                  <div className="text-sm text-stone-600">
+                    <span className="font-semibold">Buyer:</span> {order.buyer?.display_name || 'Unknown'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Disputed Orders */}
+        {orders.disputed_orders && orders.disputed_orders.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2 text-red-600">
+              <Package className="w-5 h-5" /> Disputed Orders ({orders.disputed_orders.length})
+            </h2>
+            <div className="space-y-4">
+              {orders.disputed_orders.map((order: any) => (
+                <div key={order.id} className="bg-surface p-4 rounded-3xl shadow-sm border border-red-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-bold text-stone-800">Order #{order.id.slice(0, 8)}</div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 uppercase">
+                      In Dispute
+                    </span>
+                  </div>
+                  <div className="text-sm text-stone-600 mb-1">
+                    <span className="font-semibold">Artisan:</span> {order.artisan?.display_name || 'Unknown'}
+                  </div>
+                  <div className="text-sm text-stone-600">
+                    <span className="font-semibold">Buyer:</span> {order.buyer?.display_name || 'Unknown'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

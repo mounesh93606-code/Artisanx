@@ -127,13 +127,15 @@
     "enq_status_closed": "बंद हुआ"
   },
   "guide": {
-    "skip": "गाइड छोड़ें",
+    "skip": "मार्गदर्शन छोड़ें",
     "prev": "पिछला",
     "next": "अगला",
+    "replay": "कदम दोहराएं",
+    "play": "चलाएं",
+    "pause": "रोकें",
     "dont_show_again": "यह गाइड दोबारा न दिखाएं",
     "show_me": "मुझे दिखाएं",
-    "completed": "गाइड पूरा हुआ!",
-    "fallback_instruction": "हम सटीक बटन नहीं ढूंढ पाए, लेकिन आप अगले चरण पर जा सकते हैं।"
+    "step_of": "चरण {{current}} / {{total}}"
   },
   "auth": {
     "login": "लॉग इन",
@@ -143,7 +145,19 @@
     "select_role": "भूमिका चुनें",
     "artisan": "कारीगर",
     "buyer": "खरीदार",
-    "facilitator": "सुविधाकर्ता"
+    "facilitator": "सुविधाकर्ता",
+    "phone": "फ़ोन",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "your_craft": "आपका शिल्प।",
+    "your_story": "आपकी कहानी।",
+    "your_market": "आपका बाज़ार।",
+    "rural_craft_platform": "ग्रामीण शिल्प मंच",
+    "enter_phone": "10 अंकों का मोबाइल नंबर दर्ज करें",
+    "enter_otp": "6 अंकों का OTP दर्ज करें",
+    "resend_otp": "OTP पुनः भेजें",
+    "logout": "लॉग आउट",
+    "choose_language": "भाषा चुनें"
   },
   "profile": {
     "name": "नाम",
@@ -214,7 +228,10 @@
     "filters": "फ़िल्टर",
     "sort_by": "क्रमबद्ध करें",
     "newest_first": "सबसे नए पहले",
-    "no_products_found": "आपके मानदंडों से मेल खाने वाले कोई उत्पाद नहीं मिले।"
+    "no_products_found": "आपके मानदंडों से मेल खाने वाले कोई उत्पाद नहीं मिले।",
+    "recently_viewed": "हाल ही में देखा गया",
+    "new_arrivals": "नए आगमन",
+    "see_all": "सभी देखें"
   },
   "common": {
     "loading": "लोड हो रहा है...",
@@ -239,7 +256,21 @@
     "no_image": "कोई छवि नहीं",
     "enquiry_not_found": "पूछताछ नहीं मिली",
     "status_response": "स्थिति जवाब",
-    "note_from_artisan": "कारीगर का नोट"
+    "note_from_artisan": "कारीगर का नोट",
+    "buy_now": "अभी खरीदें",
+    "add_to_cart": "कार्ट में जोड़ें",
+    "view": "देखें",
+    "confirm": "पुष्टि करें",
+    "reject": "अस्वीकार करें",
+    "close": "बंद करें",
+    "filter": "फ़िल्टर",
+    "search": "खोजें",
+    "apply": "लागू करें",
+    "clear": "साफ़ करें",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "are_you_sure": "क्या आप सुनिश्चित हैं?",
+    "something_went_wrong": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
   },
   "notifications": {
     "title": "सूचनाएं",
@@ -287,5 +318,106 @@
     "next_step_desc": "अधिक खरीदारों को आकर्षित करने के लिए अपने नवीनतम शिल्प की तस्वीरें अपलोड करें!",
     "greeting_prefix": "आज आप क्या करना चाहेंगे?",
     "see_all": "सभी देखें"
+  },
+  "nav": {
+    "home": "होम",
+    "explore": "एक्सप्लोर",
+    "enquiries": "पूछताछ",
+    "orders": "ऑर्डर",
+    "profile": "प्रोफ़ाइल",
+    "dashboard": "डैशबोर्ड",
+    "artisans": "कारीगर",
+    "reviews": "समीक्षाएं",
+    "support": "सहायता",
+    "disputes": "विवाद",
+    "activity": "गतिविधियां"
+  },
+  "cart": {
+    "title": "मेरी कार्ट",
+    "empty": "आपकी कार्ट खाली है",
+    "empty_desc": "सुंदर हस्तनिर्मित उत्पाद खोजें और उन्हें अपनी कार्ट में जोड़ें।",
+    "start_shopping": "खरीदारी शुरू करें",
+    "price": "मूल्य",
+    "quantity": "मात्रा",
+    "subtotal": "उप-योग",
+    "shipping": "शिपिंग",
+    "free": "निःशुल्क",
+    "total": "कुल",
+    "remove": "हटाएं",
+    "checkout": "चेकआउट करें",
+    "continue_shopping": "खरीदारी जारी रखें",
+    "items": "उत्पाद",
+    "shopping_cart": "शॉपिंग कार्ट",
+    "clear_all": "सभी हटाएं",
+    "explore_marketplace": "मार्केटप्लेस देखें",
+    "total_payable": "कुल देय राशि",
+    "enquiry_confirmed": "पूछताछ की पुष्टि हुई"
+  },
+  "checkout": {
+    "title": "चेकआउट",
+    "delivery_info": "डिलीवरी की जानकारी",
+    "full_name": "पूरा नाम",
+    "phone": "फ़ोन नंबर",
+    "address": "सड़क का पता",
+    "city": "शहर",
+    "state": "राज्य",
+    "postal_code": "पिन कोड",
+    "order_summary": "ऑर्डर सारांश",
+    "place_order": "ऑर्डर दें",
+    "placing_order": "ऑर्डर दिया जा रहा है...",
+    "order_success": "ऑर्डर सफलतापूर्वक दिया गया!",
+    "order_success_desc": "आपका ऑर्डर कारीगर को भेज दिया गया है। आप ऑर्डर टैब में इसकी प्रगति ट्रैक कर सकते हैं।",
+    "view_orders": "मेरे ऑर्डर देखें",
+    "order_failed": "ऑर्डर देने में विफल। कृपया पुनः प्रयास करें।",
+    "payment_method": "भुगतान का तरीका",
+    "cod": "कैश ऑन डिलीवरी (COD)",
+    "cod_desc": "उत्पाद मिलने पर सीधे भुगतान करें",
+    "notes": "ऑर्डर नोट्स (वैकल्पिक)",
+    "required_fields": "कृपया सभी आवश्यक शिपिंग पते भरें।"
+  },
+  "order_status": {
+    "pending": "लंबित",
+    "confirmed": "पुष्टीकृत",
+    "in_production": "निर्माण में",
+    "ready_for_dispatch": "प्रेषण के लिए तैयार",
+    "dispatched": "प्रेषित",
+    "delivered": "वितरित",
+    "completed": "पूर्ण",
+    "cancelled": "रद्द",
+    "cancellation_requested": "रद्दीकरण का अनुरोध",
+    "disputed": "विवाद में"
+  },
+  "orders": {
+    "title": "मेरे ऑर्डर",
+    "empty": "अभी तक कोई ऑर्डर नहीं",
+    "empty_desc": "जब आप उत्पाद खरीदेंगे, तो आपके ऑर्डर की स्थिति यहां दिखाई देगी।",
+    "order_id": "ऑर्डर आईडी",
+    "placed_on": "दिनांक",
+    "items": "उत्पाद",
+    "total": "कुल",
+    "view_details": "विवरण देखें",
+    "tracking": "ऑर्डर ट्रैकिंग",
+    "artisan": "कारीगर",
+    "buyer": "खरीदार",
+    "track_order": "ऑर्डर विवरण ट्रैक करें"
+  },
+  "categories": {
+    "all": "सभी",
+    "weaving": "बुनाई",
+    "pottery": "मिट्टी के बर्तन",
+    "woodwork": "काष्ठकला",
+    "textile": "कपड़ा",
+    "jewelry": "आभूषण",
+    "metalwork": "धातुकला",
+    "leather": "चमड़ा"
+  },
+  "helping_hand": {
+    "title": "सहायक हाथ",
+    "intro": "नमस्ते! मैं आपका शिल्प सहायक हूँ। आज मैं आपकी क्या मदद कर सकता हूँ?",
+    "voice_prompt": "माइक पर टैप करें और अपनी भाषा में बोलें।",
+    "start_listening": "सुन रहा हूँ...",
+    "stop_listening": "रोकें",
+    "help_text": "आप मूल्य निर्धारण, कैटलॉग निर्माण या ऑर्डर के बारे में प्रश्न पूछ सकते हैं।",
+    "error_listening": "ऑडियो पहचान नहीं सका। कृपया पुनः प्रयास करें या लिखें।"
   }
 }

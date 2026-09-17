@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import BottomNav from '../../components/BottomNav';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
+import { LanguageSwitcher } from '../../components/layout/LanguageSwitcher';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import api from '../../lib/api';
 
@@ -44,7 +45,8 @@ export default function ArtisanHome() {
               <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">{t('common.home')}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageSwitcher />
             <NotificationBell />
             <button 
               onClick={() => navigate('/artisan/profile')}

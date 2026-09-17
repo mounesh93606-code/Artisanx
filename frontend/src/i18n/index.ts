@@ -11,6 +11,12 @@ import bn from './bn.json';
 import mr from './mr.json';
 import ur from './ur.json';
 
+const initialLng = localStorage.getItem('language') || 'en';
+if (typeof document !== 'undefined') {
+  document.documentElement.dir = initialLng === 'ur' ? 'rtl' : 'ltr';
+  document.documentElement.lang = initialLng;
+}
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
@@ -23,7 +29,7 @@ i18n.use(initReactI18next).init({
     mr: { translation: mr },
     ur: { translation: ur }
   },
-  lng: localStorage.getItem('language') || 'en',
+  lng: initialLng,
   fallbackLng: 'en',
   interpolation: { escapeValue: false }
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../ui/Button';
+import { useTranslation } from 'react-i18next';
 
 const translations: Record<string, any> = {
   en: {
@@ -57,6 +58,7 @@ interface RoleSelectProps {
 
 const RoleSelect: React.FC<RoleSelectProps> = ({ lang }) => {
   const { setRole, isLoading } = useAuthStore();
+  const { t: tI18n } = useTranslation();
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<'artisan' | 'buyer' | 'facilitator' | null>('artisan');
 
@@ -68,15 +70,17 @@ const RoleSelect: React.FC<RoleSelectProps> = ({ lang }) => {
     navigate(`/${selectedRole}`);
   };
 
+  const currentRoleLabel = selectedRole === 'artisan' ? t.artisan : selectedRole === 'buyer' ? t.buyer : t.facilitator;
+
   return (
     <div className="w-full space-y-6">
       <div className="mb-4 text-center">
         <h2 className="text-2xl font-bold text-on-surface flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-primary">badge</span>
-          Select Your Role
+          {tI18n('auth.select_role')}
         </h2>
         <p className="text-on-surface-variant mt-2 text-sm">
-          Choose how you will engage with the handcrafted artisan marketplace
+          {t.artisanDesc ? `${t.artisan} • ${t.buyer} • ${t.facilitator}` : ''}
         </p>
       </div>
       
@@ -93,7 +97,7 @@ const RoleSelect: React.FC<RoleSelectProps> = ({ lang }) => {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-on-surface">{t.artisan}</h3>
-                  <span className="px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-semibold uppercase">Recommended</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-semibold uppercase">✓</span>
                 </div>
                 <p className="text-sm text-on-surface-variant mt-1 leading-snug">{t.artisanDesc}</p>
               </div>
@@ -147,7 +151,7 @@ const RoleSelect: React.FC<RoleSelectProps> = ({ lang }) => {
       
       <div className="pt-4">
         <Button onClick={handleRoleSelect} disabled={isLoading || !selectedRole} fullWidth>
-          {isLoading ? 'Saving...' : `Continue as ${selectedRole}`}
+          {isLoading ? tI18n('common.loading') : `${tI18n('common.continue')} (${currentRoleLabel})`}
         </Button>
       </div>
     </div>

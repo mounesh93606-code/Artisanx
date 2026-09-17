@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     GEMINI_API_KEY: str = ""
     SERPAPI_KEY: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
+    CORS_ORIGINS: str = ""
 
     # Bhashini (ULCA / Dhruva) Settings
     BHASHINI_USER_ID: str = ""

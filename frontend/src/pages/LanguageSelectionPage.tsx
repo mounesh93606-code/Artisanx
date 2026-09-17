@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ const languages = [
 
 const LanguageSelectionPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setLanguage, isAuthenticated, user } = useAuthStore();
   const { i18n } = useTranslation();
 
@@ -25,7 +26,12 @@ const LanguageSelectionPage = () => {
     document.documentElement.dir = code === 'ur' ? 'rtl' : 'ltr';
     document.documentElement.lang = code;
 
-    if (isAuthenticated && user) {
+    const from = (location.state as any)?.from;
+    if (from) {
+      navigate(from);
+    } else if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else if (isAuthenticated && user) {
       navigate(`/${user.role}`);
     } else {
       navigate('/login');

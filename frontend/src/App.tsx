@@ -35,6 +35,8 @@ import SavedProductsPage from './pages/buyer/SavedProductsPage';
 import BuyerEnquiries from './pages/buyer/BuyerEnquiries';
 import BuyerQuotationDetail from './pages/buyer/BuyerQuotationDetail';
 import BuyerOrderDetail from './pages/buyer/BuyerOrderDetail';
+import CartPage from './pages/buyer/CartPage';
+import CheckoutPage from './pages/buyer/CheckoutPage';
 import FacilitatorHome from './pages/facilitator/FacilitatorHome';
 import FacilitatorArtisanProfile from './pages/facilitator/FacilitatorArtisanProfile';
 import SupportRequestsList from './pages/facilitator/SupportRequestsList';
@@ -124,6 +126,8 @@ function App() {
           <Route path="enquiry/:id" element={<BuyerEnquiryDetail />} />
           <Route path="orders" element={<BuyerOrders />} />
           <Route path="orders/:id" element={<BuyerOrderDetail />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
           <Route path="profile" element={<BuyerProfile />} />
         </Route>
 

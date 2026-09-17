@@ -15,11 +15,16 @@ def create_support_request(req: SupportRequestCreate, current_user: dict = Depen
     user_id = current_user["id"]
     role = get_role(current_user)
     
-    if role != "artisan":
-        raise HTTPException(status_code=403, detail="Only artisans can create support requests")
+    if role not in ["artisan", "facilitator"]:
+        raise HTTPException(status_code=403, detail="Only artisans and facilitators can create support requests")
         
     data = req.dict(exclude_unset=True)
-    data["artisan_id"] = user_id
+    if role == "artisan":
+        data["artisan_id"] = user_id
+    else:
+        if not req.artisan_id:
+            raise HTTPException(status_code=400, detail="artisan_id is required when creating support as facilitator")
+        data["artisan_id"] = req.artisan_id
     
     res = client.table("support_requests").insert(data).execute()
     sr_id = res.data[0]["id"]
@@ -27,12 +32,24 @@ def create_support_request(req: SupportRequestCreate, current_user: dict = Depen
     # Create conversation for this support request
     conv_data = {
         "support_request_id": sr_id,
-        "artisan_id": user_id
+        "artisan_id": data["artisan_id"]
     }
     client.table("conversations").insert(conv_data).execute()
     
-    from notifications.service import notify_facilitators
-    notify_facilitators("support_created", "New Support Request", "A new support request was created by an artisan.", {"support_request_id": sr_id})
+    if role == "artisan":
+        from notifications.service import notify_facilitators
+        notify_facilitators("support_created", "New Support Request", "A new support request was created by an artisan.", {"support_request_id": sr_id})
+    else:
+        from notifications.service import create_notification
+        create_notification(
+            user_id=data["artisan_id"],
+            type="support_offered",
+            title="Facilitator Support Offered",
+            message=f"A facilitator initiated support: {req.issue_summary}",
+            metadata={"support_request_id": sr_id}
+        )
+        from facilitator.service import log_facilitator_activity
+        log_facilitator_activity(user_id, "support_offered", "artisan", data["artisan_id"], req.issue_summary)
     
     return {"status": "success", "support_request": res.data[0]}
 

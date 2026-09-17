@@ -96,7 +96,5 @@ def get_artisan_dashboard(current_user: dict = Depends(get_current_user), token:
         raise
     except Exception as e:
         trace = traceback.format_exc()
-        print(trace)
-        with open("dashboard_error.txt", "w") as f:
-            f.write(trace)
+        print("Dashboard Exception:", trace)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)} \nTrace: {trace}")

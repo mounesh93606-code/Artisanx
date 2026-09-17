@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function BuyerOrders() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { token } = useAuthStore();
     const [orders, setOrders] = useState<any[]>([]);
@@ -29,7 +31,13 @@ export default function BuyerOrders() {
         fetchOrders();
     }, [token]);
 
-    const tabs = ['All', 'Active', 'Delivered', 'Cancelled', 'Returned'];
+    const tabs = [
+        { id: 'All', label: t('common.all', { defaultValue: 'All' }) },
+        { id: 'Active', label: t('order_status.in_production', { defaultValue: 'Active' }) },
+        { id: 'Delivered', label: t('order_status.delivered', { defaultValue: 'Delivered' }) },
+        { id: 'Cancelled', label: t('order_status.cancelled', { defaultValue: 'Cancelled' }) },
+        { id: 'Returned', label: t('order_status.disputed', { defaultValue: 'Returned' }) }
+    ];
 
     const getStatusGroup = (status: string) => {
         switch (status) {
@@ -79,17 +87,17 @@ export default function BuyerOrders() {
     return (
         <div className="w-full relative pb-24 bg-surface-container-lowest min-h-screen">
             <div className="bg-surface px-6 pt-6 pb-2 sticky top-0 z-10 shadow-sm border-b border-outline-variant">
-                <h1 className="text-2xl font-bold text-stone-800 mb-4">My Orders</h1>
+                <h1 className="text-2xl font-bold text-stone-800 mb-4">{t('orders.title', { defaultValue: 'My Orders' })}</h1>
                 <div className="flex gap-4 overflow-x-auto hide-scrollbar">
                     {tabs.map(tab => (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
                             className={`pb-3 px-1 whitespace-nowrap text-sm font-bold border-b-2 transition-colors ${
-                                activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-stone-500 hover:text-stone-700'
+                                activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-stone-500 hover:text-stone-700'
                             }`}
                         >
-                            {tab}
+                            {tab.label}
                         </button>
                     ))}
                 </div>
@@ -114,22 +122,22 @@ export default function BuyerOrders() {
                                             )}
                                         </div>
                                         <div>
-                                            <div className="text-xs text-stone-500 font-bold mb-0.5">Order #{order.display_id}</div>
+                                            <div className="text-xs text-stone-500 font-bold mb-0.5">{t('orders.order_id', { defaultValue: 'Order' })} #{order.display_id}</div>
                                             <div className="font-bold text-stone-800 line-clamp-1">{order.product_snapshot?.title || 'Product'}</div>
-                                            <div className="text-xs text-stone-500 mt-0.5">{order.artisan?.display_name || 'Artisan'}</div>
+                                            <div className="text-xs text-stone-500 mt-0.5">{order.artisan?.display_name || t('orders.artisan')}</div>
                                         </div>
                                     </div>
                                     <div className={`px-2 py-1 rounded-full text-[10px] font-bold border flex items-center whitespace-nowrap ${getStatusColor(order.status)}`}>
                                         {getStatusIcon(order.status)}
-                                        {order.status.replace(/_/g, ' ').toUpperCase()}
+                                        {t(`order_status.${order.status}`, { defaultValue: order.status.replace(/_/g, ' ').toUpperCase() })}
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-2 text-sm text-stone-600 mb-4 bg-stone-50 p-3 rounded-xl border border-stone-100">
-                                    <div><span className="text-stone-400 text-xs block">Total Amount</span><span className="font-bold text-stone-800">₹{order.total_order_value}</span></div>
-                                    <div><span className="text-stone-400 text-xs block">Quantity</span><span className="font-bold text-stone-800">{order.quantity} units</span></div>
-                                    <div><span className="text-stone-400 text-xs block">Order Date</span><span className="font-bold text-stone-800">{new Date(order.created_at).toLocaleDateString()}</span></div>
-                                    <div><span className="text-stone-400 text-xs block">Expected Dispatch</span><span className="font-bold text-stone-800">{order.expected_dispatch_date ? new Date(order.expected_dispatch_date).toLocaleDateString() : 'TBD'}</span></div>
+                                    <div><span className="text-stone-400 text-xs block">{t('orders.total', { defaultValue: 'Total Amount' })}</span><span className="font-bold text-stone-800">₹{order.total_order_value}</span></div>
+                                    <div><span className="text-stone-400 text-xs block">{t('cart.quantity', { defaultValue: 'Quantity' })}</span><span className="font-bold text-stone-800">{order.quantity} {t('cart.items', { defaultValue: 'units' })}</span></div>
+                                    <div><span className="text-stone-400 text-xs block">{t('orders.placed_on', { defaultValue: 'Order Date' })}</span><span className="font-bold text-stone-800">{new Date(order.created_at).toLocaleDateString()}</span></div>
+                                    <div><span className="text-stone-400 text-xs block">{t('orders.tracking', { defaultValue: 'Expected Dispatch' })}</span><span className="font-bold text-stone-800">{order.expected_dispatch_date ? new Date(order.expected_dispatch_date).toLocaleDateString() : 'TBD'}</span></div>
                                 </div>
 
                                 <div className="pt-3 border-t border-stone-100 flex gap-2">
@@ -137,7 +145,7 @@ export default function BuyerOrders() {
                                         onClick={() => navigate(`/buyer/orders/${order.id}`)}
                                         className="flex-1 py-2.5 text-sm font-bold bg-primary text-on-primary rounded-xl text-center hover:bg-primary/90 transition-colors"
                                     >
-                                        View Order Details
+                                        {t('orders.view_details', { defaultValue: 'View Order Details' })}
                                     </button>
                                 </div>
                             </div>
@@ -146,10 +154,10 @@ export default function BuyerOrders() {
                 ) : (
                     <div className="text-center py-20 bg-surface rounded-3xl shadow-sm border border-stone-100">
                         <Package className="w-16 h-16 text-stone-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-stone-700 mb-2">No {activeTab !== 'All' ? activeTab.toLowerCase() : ''} orders found</h3>
-                        <p className="text-stone-500 text-sm max-w-xs mx-auto">When you place an order or its status changes, it will appear here.</p>
+                        <h3 className="text-lg font-bold text-stone-700 mb-2">{t('orders.empty', { defaultValue: 'No orders found' })}</h3>
+                        <p className="text-stone-500 text-sm max-w-xs mx-auto">{t('orders.empty_desc', { defaultValue: 'When you place an order or its status changes, it will appear here.' })}</p>
                         {activeTab !== 'All' && (
-                            <button onClick={() => setActiveTab('All')} className="mt-6 text-primary font-bold hover:underline">View all orders</button>
+                            <button onClick={() => setActiveTab('All')} className="mt-6 text-primary font-bold hover:underline">{t('common.all', { defaultValue: 'View all orders' })}</button>
                         )}
                     </div>
                 )}

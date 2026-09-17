@@ -36,12 +36,15 @@ export default function FacilitatorArtisanProfile() {
   }, [id, token]);
 
   const handleOfferSupport = async () => {
-    if (!supportMessage.trim()) return;
+    if (!supportMessage.trim() || !id) return;
     setSubmittingSupport(true);
     try {
-      // Mocking support submission since we don't have a direct endpoint for this specific action in the prompt, 
-      // but we can post to support_requests if there's an API, or just simulate success.
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.post('/support-requests/', {
+        artisan_id: id,
+        category: supportType.toLowerCase().replace(/\s+/g, '_'),
+        issue_summary: `Facilitator Support: ${supportType}`,
+        description: supportMessage
+      });
       alert('Support request submitted successfully!');
       setShowSupportModal(false);
       setSupportMessage('');
@@ -215,10 +218,62 @@ export default function FacilitatorArtisanProfile() {
           </div>
         )}
 
-        {(activeTab === 'Orders' || activeTab === 'Reviews') && (
-           <div className="text-center text-stone-500 py-12">
-             Coming soon for this view.
-           </div>
+        {activeTab === 'Orders' && (
+          <div className="space-y-4">
+            {(!artisan.orders || artisan.orders.length === 0) ? (
+              <div className="text-center text-stone-500 bg-surface rounded-3xl p-6 border border-outline-variant">
+                No orders for this artisan yet.
+              </div>
+            ) : (
+              artisan.orders.map((order: any) => (
+                <div key={order.id} className="bg-surface rounded-3xl shadow-sm border border-outline-variant/50 p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-bold text-stone-800 text-sm">Order #{order.id.slice(0, 8)}</div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                      order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                      'bg-stone-100 text-stone-700'
+                    }`}>
+                      {order.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="text-xs text-stone-600 mb-1">
+                    <span className="font-semibold">Buyer:</span> {order.buyer?.display_name || 'Buyer'}
+                  </div>
+                  <div className="text-xs text-stone-500">
+                    {order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'Reviews' && (
+          <div className="space-y-4">
+            {(!artisan.buyer_feedback || artisan.buyer_feedback.length === 0) ? (
+              <div className="text-center text-stone-500 bg-surface rounded-3xl p-6 border border-outline-variant">
+                No buyer reviews for this artisan yet.
+              </div>
+            ) : (
+              artisan.buyer_feedback.map((review: any) => (
+                <div key={review.id} className="bg-surface rounded-3xl shadow-sm border border-outline-variant/50 p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-bold text-stone-800 text-sm">{review.buyer?.display_name || 'Verified Buyer'}</div>
+                    <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold">
+                      <Star className="w-3.5 h-3.5 fill-current" /> {review.rating || 5}
+                    </div>
+                  </div>
+                  {review.comment && (
+                    <p className="text-xs text-stone-600 italic mb-2">"{review.comment}"</p>
+                  )}
+                  <div className="text-[10px] text-stone-400">
+                    {review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
 

@@ -124,9 +124,21 @@ def route_respond_enquiry(enquiry_id: str, req: EnquiryRespond, current_user: di
     product_id = res.data[0]["product_id"]
     product_title = res.data[0].get("products", {}).get("title") if res.data[0].get("products") else ""
         
+    db_artisan_response = req.artisan_response
+    db_status = "responded"
+    if req.artisan_response in ["accepted", "interested"]:
+        db_artisan_response = "interested"
+        db_status = "accepted"
+    elif req.artisan_response in ["cannot_fulfil", "rejected"]:
+        db_artisan_response = "cannot_fulfil"
+        db_status = "rejected"
+    elif req.artisan_response == "need_details":
+        db_artisan_response = "need_details"
+        db_status = "responded"
+
     update_data = {
-        "status": "responded",
-        "artisan_response": req.artisan_response,
+        "status": db_status,
+        "artisan_response": db_artisan_response,
         "artisan_response_note": req.artisan_response_note,
         "responded_at": datetime.utcnow().isoformat()
     }

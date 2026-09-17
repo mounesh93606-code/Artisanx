@@ -49,6 +49,10 @@ def get_stats(token: HTTPAuthorizationCredentials = Depends(security)):
     delayed_res = client.table("orders").select("id", count="exact").lt("expected_dispatch_date", datetime.utcnow().isoformat()).not_.in_("status", ["dispatched", "delivered", "completed", "cancelled"]).execute()
     delayed_orders = delayed_res.count if delayed_res.count else 0
     
+    # Active orders count
+    active_res = client.table("orders").select("id", count="exact").in_("status", ["confirmed", "in_production", "ready_for_dispatch"]).execute()
+    active_orders = active_res.count if active_res.count else 0
+    
     return {
         "total_artisans": artisans_count or 0,
         "incomplete_profiles": incomplete,
@@ -60,7 +64,8 @@ def get_stats(token: HTTPAuthorizationCredentials = Depends(security)):
         "pending_enquiries": pending_enq or 0,
         "open_support_requests": open_support_reqs or 0,
         "open_disputes": open_disputes or 0,
-        "delayed_orders": delayed_orders
+        "delayed_orders": delayed_orders,
+        "active_orders": active_orders
     }
 
 @router.get("/artisans")
@@ -110,7 +115,15 @@ def get_artisan(id: str, token: HTTPAuthorizationCredentials = Depends(security)
     # Get products
     prods = client.table("products").select("id, title, status, readiness_score, price, product_images(image_url)").eq("artisan_id", id).execute()
     
-    # Empty states for unavailable data
+    # Get orders
+    orders_res = client.table("orders").select("*, buyer:users!buyer_id(display_name)").eq("artisan_id", id).order("created_at", desc=True).execute()
+    all_orders = orders_res.data or []
+    completed_orders = [o for o in all_orders if o.get("status") == "completed"]
+    
+    # Get buyer reviews
+    reviews_res = client.table("buyer_reviews").select("*, buyer:users!buyer_id(display_name)").eq("artisan_id", id).order("created_at", desc=True).execute()
+    buyer_feedback = reviews_res.data or []
+    
     return {
         "id": u["id"],
         "name": u.get("display_name"),
@@ -119,10 +132,11 @@ def get_artisan(id: str, token: HTTPAuthorizationCredentials = Depends(security)
         "status": prof.get("verification_status"),
         "story": prof.get("craft_story"),
         "location": prof.get("location"),
-        "products": prods.data,
-        "completed_orders": [], # Not implemented yet
-        "buyer_feedback": [], # Not implemented yet
-        "documents": [] # Not implemented yet
+        "products": prods.data or [],
+        "orders": all_orders,
+        "completed_orders": completed_orders,
+        "buyer_feedback": buyer_feedback,
+        "documents": []
     }
 
 @router.put("/artisans/{id}/verification")
@@ -148,6 +162,9 @@ def list_product_issues(token: HTTPAuthorizationCredentials = Depends(security))
         "id, title, status, price, stock_quantity, readiness_score, artisan:users!artisan_id(display_name), images:product_images(image_url)"
     ).execute()
     
+    reviews_res = client.table("facilitator_reviews").select("*").execute()
+    review_map = {r["product_id"]: r for r in (reviews_res.data or [])}
+    
     issues = []
     for p in res.data:
         missing = []
@@ -156,15 +173,21 @@ def list_product_issues(token: HTTPAuthorizationCredentials = Depends(security))
         if not p.get("images"): missing.append("missing_image")
         if (p.get("readiness_score") or 0) < 70: missing.append("low_readiness")
         
-        if missing:
-            issues.append({
-                "product_id": p["id"],
-                "title": p.get("title"),
-                "image": p.get("images")[0]["image_url"] if p.get("images") else None,
-                "artisan_name": p.get("artisan", {}).get("display_name") if p.get("artisan") else None,
-                "readiness_score": p.get("readiness_score") or 0,
-                "missing": missing
-            })
+        rev = review_map.get(p["id"], {})
+        rev_status = rev.get("review_status", "pending")
+        
+        issues.append({
+            "product_id": p["id"],
+            "title": p.get("title"),
+            "price": p.get("price"),
+            "image": p.get("images")[0]["image_url"] if p.get("images") else None,
+            "artisan_name": p.get("artisan", {}).get("display_name") if p.get("artisan") else None,
+            "readiness_score": p.get("readiness_score") or 0,
+            "missing": missing,
+            "review_status": rev_status,
+            "review_notes": rev.get("notes"),
+            "review_flags": rev.get("flags")
+        })
             
     issues.sort(key=lambda x: x["readiness_score"])
     return {"issues": issues}

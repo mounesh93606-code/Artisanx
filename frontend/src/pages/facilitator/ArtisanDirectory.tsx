@@ -11,6 +11,8 @@ export default function ArtisanDirectory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
 
+  const [searchTerm, setSearchTerm] = useState('');
+
   useEffect(() => {
     async function fetchArtisans() {
       try {
@@ -26,6 +28,11 @@ export default function ArtisanDirectory() {
   }, []);
 
   const filteredArtisans = artisans.filter(a => {
+    const matchesSearch = !searchTerm.trim() || 
+      (a.name && a.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (a.craft && a.craft.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (a.business_name && a.business_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (!matchesSearch) return false;
     if (filter === 'All') return true;
     if (filter === 'Verified') return a.status === 'cooperative_verified' || a.status === 'facilitator_reviewed';
     if (filter === 'Needs Review') return a.status === 'self_declared' || a.status === 'documentation_pending';
@@ -53,6 +60,8 @@ export default function ArtisanDirectory() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
           <input 
             type="text" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search artisans..." 
             className="w-full bg-surface-container pl-12 pr-4 py-3 rounded-full border border-outline-variant/30 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 text-sm"
           />

@@ -1,16 +1,18 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function BottomNav() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
 
   const navItems = [
-    { name: 'Home', path: '/artisan', icon: 'home' },
-    { name: 'Products', path: '/artisan/products', icon: 'inventory_2' },
-    { name: 'Enquiries', path: '/artisan/enquiries', icon: 'chat' },
-    { name: 'Orders', path: '/artisan/orders', icon: 'shopping_bag' },
-    { name: 'Profile', path: '/artisan/profile', icon: 'person' },
+    { label: t('nav.home'), path: '/artisan', icon: 'home' },
+    { label: t('nav.products'), path: '/artisan/products', icon: 'inventory_2' },
+    { label: t('nav.enquiries'), path: '/artisan/enquiries', icon: 'chat' },
+    { label: t('nav.orders'), path: '/artisan/orders', icon: 'shopping_bag' },
+    { label: t('nav.profile'), path: '/artisan/profile', icon: 'person' },
   ];
 
   return (
@@ -19,7 +21,7 @@ export default function BottomNav() {
         const isActive = path === item.path || (item.path !== '/artisan' && path.startsWith(item.path));
         return (
           <button
-            key={item.name}
+            key={item.path}
             onClick={() => navigate(item.path)}
             className="flex flex-col items-center justify-center space-y-1 min-w-[48px] min-h-[48px] group active:scale-95 transition-transform"
           >
@@ -29,7 +31,7 @@ export default function BottomNav() {
               </span>
             </div>
             <span className={`text-[10px] font-bold transition-colors ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
-              {item.name}
+              {item.label}
             </span>
           </button>
         );
