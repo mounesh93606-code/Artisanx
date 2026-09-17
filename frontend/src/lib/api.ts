@@ -8,7 +8,8 @@ const getInitialApiUrl = (): string => {
         const customUrl = localStorage.getItem('artisanx_api_url');
         if (customUrl) return customUrl;
     }
-    return 'http://localhost:8000';
+    // Default fallback to live cloud Render backend
+    return 'https://artisanx.onrender.com';
 };
 
 export const API_URL = getInitialApiUrl();
