@@ -8,13 +8,21 @@ import traceback
 from database import supabase_client, get_authenticated_client
 import os
 
-try:
-    from rembg import remove, new_session
-    # Switched to u2netp for much faster processing speed
-    rembg_session = new_session("u2netp")
-except ImportError:
-    remove = None
-    rembg_session = None
+_rembg_remove = None
+_rembg_session = None
+
+def get_rembg_tools():
+    global _rembg_remove, _rembg_session
+    if _rembg_remove is None:
+        try:
+            from rembg import remove as r_remove, new_session
+            _rembg_remove = r_remove
+            _rembg_session = new_session("u2netp")
+        except Exception as e:
+            print(f"Warning: rembg initialization deferred/failed: {e}")
+            _rembg_remove = False
+            _rembg_session = False
+    return (_rembg_remove if _rembg_remove is not False else None), (_rembg_session if _rembg_session is not False else None)
 
 MAX_FILE_SIZE = 25 * 1024 * 1024
 ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -126,11 +134,12 @@ def enhance_image(image_id: str, artisan_id: str, token: str, use_rembg: bool = 
             new_h = int(img.height * scale)
             img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         
-        if use_rembg and remove and rembg_session:
+        _remove, _session = get_rembg_tools()
+        if use_rembg and _remove and _session:
             # Added alpha matting to preserve thin structures (wicker, chains, etc.)
-            img = remove(
+            img = _remove(
                 img, 
-                session=rembg_session,
+                session=_session,
                 alpha_matting=True,
                 alpha_matting_foreground_threshold=240,
                 alpha_matting_background_threshold=10,
