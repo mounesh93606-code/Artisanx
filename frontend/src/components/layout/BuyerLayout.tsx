@@ -2,6 +2,8 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { MobileShell } from './MobileShell';
 import { Home, Compass, MessageSquare, Package, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import GuideHandOverlay from '../guide-hand/GuideHandOverlay';
+import ShowMeFab from '../guide-hand/ShowMeFab';
 
 export function BuyerLayout() {
   const { t } = useTranslation();
@@ -38,6 +40,8 @@ export function BuyerLayout() {
             </NavLink>
         </div>
       )}
+      <GuideHandOverlay />
+      <ShowMeFab />
     </MobileShell>
   );
 }

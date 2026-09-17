@@ -162,6 +162,7 @@ export default function CartPage() {
                         <div className="text-xl font-black text-primary">₹{total.toLocaleString()}</div>
                     </div>
                     <button 
+                        data-help="checkout-btn"
                         onClick={() => navigate('/buyer/checkout')}
                         className="flex-1 max-w-[220px] min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                     >

@@ -16,6 +16,8 @@ export interface GuidanceStep {
     instruction_ur: string;
     expected_event?: string;
     expected_condition?: string;
+    route?: string;
+    productStep?: number;
 }
 
 export interface GuidanceWorkflow {

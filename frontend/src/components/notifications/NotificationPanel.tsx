@@ -56,17 +56,20 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                 navigate(`/buyer/enquiry/${metadata?.enquiry_id}`); 
             }
         } else if (type === 'product_published') {
-            navigate(`/artisan/products/${metadata?.product_id}/edit`);
+            navigate(`/artisan/products/${metadata?.product_id}`);
         } else if (type === 'profile_verified') {
             navigate(`/artisan/profile`);
         } else if (['order_confirmed', 'cancellation', 'cancellation_request', 'cancellation_rejected', 'order_status_update'].includes(type)) {
             if (user?.role === 'buyer') {
                 navigate(`/buyer/orders/${metadata?.order_id}`);
+            } else if (user?.role === 'artisan') {
+                navigate(`/artisan/order/${metadata?.order_id}`);
             }
-            // Add artisan order detail mapping if it exists
         } else if (['quote_sent', 'quote_rejected', 'quote_change_requested'].includes(type)) {
             if (user?.role === 'buyer') {
                 navigate(`/buyer/quotations/${metadata?.quotation_id}`);
+            } else if (user?.role === 'artisan') {
+                navigate(`/artisan/quotations/${metadata?.quotation_id}`);
             }
         }
         

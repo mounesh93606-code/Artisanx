@@ -128,7 +128,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
             
             <div className="space-y-3">
                 {/* Title Card */}
-                <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm flex flex-col group border border-outline-variant/30">
+                <div data-help="product-title" className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm flex flex-col group border border-outline-variant/30">
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] uppercase tracking-wider text-outline font-bold">{tGlobal('products.title')}</span>
                         <button onClick={() => setEditingField(editingField === 'title' ? null : 'title')} className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
@@ -148,7 +148,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                 </div>
 
                 {/* Description Card */}
-                <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm flex flex-col group border border-outline-variant/30">
+                <div data-help="description" className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm flex flex-col group border border-outline-variant/30">
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] uppercase tracking-wider text-outline font-bold">{tGlobal('products.description')}</span>
                         <button onClick={() => setEditingField(editingField === 'description' ? null : 'description')} className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">

@@ -198,12 +198,13 @@ const Step1Photo = ({ t }: { t: any }) => {
             <h2 className="text-2xl font-bold text-on-surface">{t.photoTitle}</h2>
             
             {photos.length < 5 && (
-                <div className="flex gap-4">
+                <div className="flex gap-4" data-help="product-image">
                     <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleUpload} />
                     <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleUpload} />
                     
                     <button 
                         type="button"
+                        data-help="product-image"
                         data-guide-id="add-photo-button"
                         onClick={() => cameraInputRef.current?.click()}
                         className="flex-1 flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-outline-variant rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors"

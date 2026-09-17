@@ -427,5 +427,13 @@
     "cancel": "रद्द करें",
     "opening": "खुल रहा है...",
     "sending": "भेज रहा है..."
+  },
+  "guide": {
+    "show_me": "मार्गदर्शक हाथ",
+    "step_of": "चरण {{current}} / {{total}}",
+    "next": "अगला",
+    "previous": "पीछे",
+    "skip": "छोड़ें",
+    "finish": "समाप्त"
   }
 }

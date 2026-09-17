@@ -64,6 +64,36 @@ def get_conversation_by_enquiry(enquiry_id: str, current_user: dict = Depends(ge
         
     return {"conversation": conv}
 
+@router.get("/by-order/{order_id}")
+def get_conversation_by_order(order_id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
+    client = get_service_client()
+    user_id = current_user["id"]
+    
+    res = client.table("conversations").select("*").eq("order_id", order_id).execute()
+    if not res.data:
+        ord_res = client.table("orders").select("*").eq("id", order_id).execute()
+        if not ord_res.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+        ord_obj = ord_res.data[0]
+        if ord_obj["artisan_id"] != user_id and ord_obj["buyer_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+            
+        conv_data = {
+            "order_id": order_id,
+            "enquiry_id": ord_obj.get("enquiry_id"),
+            "artisan_id": ord_obj["artisan_id"],
+            "buyer_id": ord_obj["buyer_id"]
+        }
+        c_res = client.table("conversations").insert(conv_data).execute()
+        return {"conversation": c_res.data[0]}
+        
+    conv = res.data[0]
+    if conv["artisan_id"] != user_id and conv["buyer_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    return {"conversation": conv}
+
 @router.get("/{id}/messages")
 def get_messages(id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
     client = get_service_client()

@@ -427,5 +427,13 @@
     "cancel": "Cancel",
     "opening": "Opening...",
     "sending": "Sending..."
+  },
+  "guide": {
+    "show_me": "Helping Hand",
+    "step_of": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "previous": "Back",
+    "skip": "Skip",
+    "finish": "Finish"
   }
 }

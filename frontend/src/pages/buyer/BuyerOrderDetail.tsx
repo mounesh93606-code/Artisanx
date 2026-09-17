@@ -251,7 +251,7 @@ export default function BuyerOrderDetail() {
                         )}
                     </div>
 
-                    <MessagingUI enquiryId={order.enquiry_id} currentUserId={order.buyer_id} />
+                    <MessagingUI enquiryId={order.enquiry_id} orderId={order.id} currentUserId={order.buyer_id} />
                 </div>
             </div>
 

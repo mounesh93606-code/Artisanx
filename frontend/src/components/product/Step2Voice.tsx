@@ -172,6 +172,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                             </>
                         )}
                         <button 
+                            data-help="voice-input"
                             aria-label="Tap to speak or record voice" 
                             className={`relative z-10 w-[88px] h-[88px] rounded-full flex flex-col items-center justify-center shadow-lg active:scale-95 transition-all ${isRecording ? 'bg-error text-on-error' : 'bg-gradient-to-br from-primary via-primary-container to-surface-tint text-on-primary'}`} 
                             onClick={isRecording ? stopRecording : startRecording}

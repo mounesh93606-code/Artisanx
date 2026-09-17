@@ -152,6 +152,7 @@ const Step7Publish = ({ t }: { t: any }) => {
 
             <div className="mt-4 flex flex-col gap-3">
                 <Button 
+                    data-help="publish-product"
                     data-guide-id="publish-button"
                     onClick={handlePublish}
                     disabled={!readiness?.is_publishable || isPublishing || loadingReadiness}

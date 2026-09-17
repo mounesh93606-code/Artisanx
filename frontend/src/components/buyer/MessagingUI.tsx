@@ -13,7 +13,7 @@ interface Message {
     created_at: string;
 }
 
-export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: string, currentUserId: string }) {
+export default function MessagingUI({ enquiryId, orderId, currentUserId }: { enquiryId?: string, orderId?: string, currentUserId?: string }) {
     const { token, user } = useAuthStore();
     const effectiveUserId = currentUserId || user?.id || '';
     const [messages, setMessages] = useState<Message[]>([]);
@@ -29,16 +29,18 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
         let isMounted = true;
 
         async function fetchMessages(silently = false) {
-            if (!enquiryId || !token) {
+            if ((!enquiryId && !orderId) || !token) {
                 if (!silently && isMounted) setLoading(false);
                 return;
             }
             try {
-                // Fetch or initialize conversation by enquiry_id directly
                 let targetConvId = conversationId;
                 if (!targetConvId) {
                     try {
-                        const convRes = await axios.get(`${API_URL}/conversations/by-enquiry/${enquiryId}`, {
+                        const url = orderId 
+                            ? `${API_URL}/conversations/by-order/${orderId}`
+                            : `${API_URL}/conversations/by-enquiry/${enquiryId}`;
+                        const convRes = await axios.get(url, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
                         targetConvId = convRes.data.conversation?.id;
@@ -47,7 +49,9 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
                         const listRes = await axios.get(`${API_URL}/conversations/`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
-                        const found = listRes.data.conversations?.find((c: any) => c.enquiry_id === enquiryId);
+                        const found = listRes.data.conversations?.find((c: any) => 
+                            (orderId && c.order_id === orderId) || (enquiryId && c.enquiry_id === enquiryId)
+                        );
                         targetConvId = found?.id;
                     }
                 }
@@ -79,7 +83,7 @@ export default function MessagingUI({ enquiryId, currentUserId }: { enquiryId: s
             isMounted = false;
             clearInterval(pollInterval);
         };
-    }, [enquiryId, token, conversationId]);
+    }, [enquiryId, orderId, token, conversationId]);
 
     useEffect(() => {
         // Scroll only the internal message container, NEVER the window/page

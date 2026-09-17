@@ -69,6 +69,7 @@ export default function ArtisanHome() {
 
         <section className="w-full">
           <button 
+            data-help="add-product"
             data-guide-id="add-product-button"
             id="add-product-button" 
             onClick={() => navigate('/artisan/product/create')}

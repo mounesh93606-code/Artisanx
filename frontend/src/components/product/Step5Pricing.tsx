@@ -240,9 +240,10 @@ const Step5Pricing = ({ t, isRTL }: { t: any, isRTL: boolean }) => {
                     </label>
                 </div>
 
-                <div className="relative">
+                <div className="relative" data-help="price">
                     <span className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-5' : 'left-5'} text-on-surface-variant font-bold text-xl`}>₹</span>
                     <input 
+                        data-help="price"
                         type="number" 
                         value={pricingData.finalPrice}
                         onChange={(e) => {

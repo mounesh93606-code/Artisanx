@@ -22,7 +22,10 @@ export default function OrderDetail() {
     if (!currentOrder) return;
     setMessaging(true);
     try {
-      const res = await api.get(`/conversations/by-enquiry/${currentOrder.enquiry_id}`);
+      const url = currentOrder.enquiry_id 
+        ? `/conversations/by-enquiry/${currentOrder.enquiry_id}`
+        : `/conversations/by-order/${currentOrder.id}`;
+      const res = await api.get(url);
       navigate(`/artisan/conversation/${res.data.conversation.id}`);
     } catch (e) {
       console.error(e);

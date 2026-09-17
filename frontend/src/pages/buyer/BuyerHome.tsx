@@ -88,6 +88,7 @@ export default function BuyerHome() {
                 
                 <form onSubmit={handleSearch} className="relative">
                     <input 
+                        data-help="search-input"
                         type="text" 
                         placeholder={t('buyer.search_ph')} 
                         value={searchQuery}
