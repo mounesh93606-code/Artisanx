@@ -78,7 +78,7 @@ const Step6Inventory = ({ t }: { t: any }) => {
     };
 
     return (
-        <div className="flex flex-col gap-6" data-guide-id="inventory-section">
+        <div className="flex flex-col gap-6" data-guide-id="inventory-section" data-help="inventory-section">
             <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 px-1">
                     <Package className="w-6 h-6 text-primary" />
@@ -111,6 +111,7 @@ const Step6Inventory = ({ t }: { t: any }) => {
                         <div>
                             <label className="text-[11px] font-bold text-outline uppercase tracking-wider block mb-1">Available Stock</label>
                             <Input 
+                                data-help="stock-input"
                                 type="number" 
                                 value={catalogueData?.stock_quantity ?? ''}
                                 onChange={(e) => handleDataChange('stock_quantity', e.target.value === '' ? '' : parseInt(e.target.value))}

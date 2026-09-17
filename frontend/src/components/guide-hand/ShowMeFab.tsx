@@ -27,12 +27,12 @@ export default function ShowMeFab({ workflow }: ShowMeFabProps) {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => startWorkflow(targetWorkflow)}
-      className="fixed bottom-20 right-4 sm:right-6 z-40 bg-amber-500 text-white rounded-full p-3 sm:p-3.5 shadow-xl flex items-center justify-center gap-2 hover:bg-amber-600 active:scale-95 transition-all group border-2 border-white"
+      className="fixed bottom-28 right-4 sm:right-6 z-[60] bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full px-4 py-2.5 shadow-[0_8px_25px_rgba(217,119,6,0.5)] flex items-center justify-center gap-2 hover:from-amber-600 hover:to-amber-700 active:scale-95 transition-all group border-2 border-white"
       aria-label="Helping Hand Guide"
       title="Helping Hand Guide"
     >
-      <Sparkles className="w-5 h-5 animate-pulse" />
-      <span className="font-bold text-xs pr-1 hidden xs:inline sm:inline">
+      <Sparkles className="w-5 h-5 text-white animate-pulse" />
+      <span className="font-extrabold text-xs tracking-wide">
         {t('guide.show_me') || 'Helping Hand'}
       </span>
     </motion.button>

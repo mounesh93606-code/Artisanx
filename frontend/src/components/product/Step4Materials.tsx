@@ -36,7 +36,7 @@ const Step4Materials = ({ t }: { t: any }) => {
     const total = materialsData.reduce((sum, m) => sum + (m.quantity * m.cost), 0);
 
     return (
-        <div className="flex flex-col gap-6" data-guide-id="material-checklist">
+        <div className="flex flex-col gap-6" data-guide-id="material-checklist" data-help="materials-section">
             
             <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 px-1">
