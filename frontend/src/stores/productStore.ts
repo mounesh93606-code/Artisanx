@@ -102,7 +102,10 @@ interface ProductWizardState {
           confidence: string;
           explanation: string[];
           model?: string;
+          model_version?: string;
           features_used?: number;
+          comparable_market_price?: number;
+          top_market_prices?: any;
           status?: string;
       } | null;
       isAiLoading?: boolean;
