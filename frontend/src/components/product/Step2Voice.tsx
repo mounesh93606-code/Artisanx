@@ -1,11 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mic, Square, RotateCcw, CheckCircle, Keyboard, Type } from 'lucide-react';
+import { Mic, Square, RotateCcw, CheckCircle, Keyboard, Type, AlertCircle } from 'lucide-react';
 import { useProductStore } from '../../stores/productStore';
 import api from '../../lib/api';
 import { Button } from '../ui/Button';
 
+const REGIONAL_LANGUAGES = [
+    { code: 'en', label: 'English', native: 'English' },
+    { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
+    { code: 'ta', label: 'Tamil', native: 'தமிழ்' },
+    { code: 'te', label: 'Telugu', native: 'తెలుగు' },
+    { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' },
+    { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
+    { code: 'bn', label: 'Bengali', native: 'বাংলা' },
+    { code: 'mr', label: 'Marathi', native: 'मराठी' },
+    { code: 'gu', label: 'Gujarati', native: 'ગુજરાતી' },
+];
+
 const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
     const { voiceData, setVoiceData, setStep, saveDraft, draftId } = useProductStore();
+    const [selectedLang, setSelectedLang] = useState(lang || 'en');
     const [isRecording, setIsRecording] = useState(false);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -62,9 +75,12 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
             setIsRecording(true);
             setTimer(0);
             timerRef.current = window.setInterval(() => setTimer(t => t + 1), 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Microphone access denied", err);
-            setErrorMsg("Could not access microphone.");
+            const isPerm = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError';
+            setErrorMsg(isPerm 
+                ? "Microphone permission denied. Please allow microphone access in device Settings -> Apps -> ArtisanX." 
+                : "Could not access microphone. You can type your description manually using the 'Type' tab above.");
         }
     };
 
@@ -83,14 +99,21 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
         setErrorMsg('');
         
         try {
+            const ext = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : audioBlob.type.includes('wav') ? 'wav' : 'webm';
             const formData = new FormData();
-            formData.append('file', audioBlob, 'recording.webm');
+            formData.append('file', audioBlob, `recording.${ext}`);
             if (draftId) formData.append('product_id', draftId);
-            if (lang) formData.append('language', lang);
+            formData.append('language', selectedLang);
             
             const transcribeRes = await api.post('/voice/process', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+
+            if (transcribeRes.data.is_valid === false) {
+                setErrorMsg(transcribeRes.data.validation_error || "Audio was unclear or silent. Please speak clearly into the microphone and record again.");
+                setIsProcessing(false);
+                return;
+            }
             
             const rawText = transcribeRes.data.translated_text || transcribeRes.data.original_text || '';
             const cleanText = rawText.trim();
@@ -106,15 +129,19 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
             setVoiceData({
                 record_id: transcribeRes.data.voice_record_id,
                 original_text: transcribeRes.data.original_text || cleanText,
-                translated_text: cleanText
+                translated_text: cleanText,
+                detected_language: transcribeRes.data.original_language || selectedLang,
+                is_valid: true
             });
         } catch (err: any) {
             console.error("Voice process error:", err);
-            let msg = err.response?.data?.detail || "Voice processing failed. You can type manually.";
-            if (typeof msg === 'string' && (msg.includes('Bucket not found') || msg.includes('{'))) {
-                msg = "Voice processing is temporarily unavailable. Please try again.";
+            let msg = err.response?.data?.detail || err.message || "Voice processing failed. You can type manually.";
+            if (err.message && err.message.toLowerCase().includes('network')) {
+                msg = "Cannot reach server. Please check backend connection via USB / Wi-Fi, or switch to Type mode.";
+            } else if (typeof msg === 'string' && (msg.includes('Bucket not found') || msg.includes('{'))) {
+                msg = "Voice processing is temporarily unavailable. You can type your craft description manually.";
             } else if (typeof msg === 'object') {
-                msg = "Voice processing is temporarily unavailable. Please try again.";
+                msg = "Voice processing error. You can type your craft description manually.";
             }
             setErrorMsg(msg);
         } finally {
@@ -126,7 +153,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
         <div className="flex flex-col gap-6" data-guide-id="product_create">
             
             {/* Input Mode Toggle */}
-            <div className="flex gap-2 bg-surface-container-low p-1 rounded-full w-fit mx-auto mb-2">
+            <div className="flex gap-2 bg-surface-container-low p-1 rounded-full w-fit mx-auto mb-1">
                 <button 
                     onClick={() => setInputMode('voice')}
                     className={`px-5 py-2 rounded-full font-bold flex items-center gap-2 transition-all text-sm ${inputMode === 'voice' ? 'bg-surface-container-lowest shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
@@ -141,6 +168,32 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                 </button>
             </div>
 
+            {/* Regional Language Selector */}
+            {inputMode === 'voice' && (
+                <div className="bg-surface-container-lowest p-3 rounded-2xl border border-outline-variant/30 shadow-sm">
+                    <div className="text-[11px] font-bold text-outline uppercase tracking-wider mb-2 flex items-center gap-1.5 px-1">
+                        <span className="material-symbols-outlined text-[16px]">translate</span>
+                        <span>Spoken Language:</span>
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
+                        {REGIONAL_LANGUAGES.map((l) => (
+                            <button
+                                key={l.code}
+                                type="button"
+                                onClick={() => setSelectedLang(l.code)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                                    selectedLang === l.code
+                                        ? 'bg-primary text-on-primary shadow-sm ring-2 ring-primary/30'
+                                        : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                                }`}
+                            >
+                                {l.native} <span className="opacity-75 font-normal">({l.label})</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {inputMode === 'voice' && !audioBlob && (
                 <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden mb-2 border border-outline-variant/30">
                     {/* Subtle Artisan Pattern Accent Background SVG */}
@@ -149,18 +202,12 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                         <circle cx="50" cy="50" fill="none" r="28" stroke="currentColor" strokeWidth="2"></circle>
                         <path d="M50 10 L50 90 M10 50 L90 50 M22 22 L78 78 M22 78 L78 22"></path>
                     </svg>
-                    
-                    {/* Language Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold text-xs mb-4 shadow-sm uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[16px]">language</span>
-                        <span>{lang} • Auto-Detected</span>
-                    </div>
 
                     <h2 className="text-2xl font-bold text-on-surface mb-2">
                         {t.voiceTitle || "Tell us about your craft"}
                     </h2>
                     <p className="text-sm text-on-surface-variant max-w-xs mb-6">
-                        Speak naturally in your own language. No typing needed.
+                        Speak naturally in your own language. Mention product name, materials, how it was made, and care.
                     </p>
 
                     {/* Glowing Interactive Mic Button */}
@@ -200,7 +247,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                         </div>
                     ) : (
                         <p className="text-sm text-primary mt-2 font-bold uppercase tracking-wider">
-                            Tap to start
+                            Tap to start recording
                         </p>
                     )}
                 </div>
@@ -211,7 +258,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                     <div className="flex items-center justify-between">
                         <span className="inline-flex items-center gap-1 text-sm text-tertiary font-bold">
                             <span className="material-symbols-outlined text-[18px]">mic_double</span>
-                            Voice captured successfully
+                            Voice captured ({REGIONAL_LANGUAGES.find(l => l.code === selectedLang)?.native})
                         </span>
                         <span className="text-[11px] text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md uppercase tracking-wider font-bold">Ready</span>
                     </div>
@@ -221,7 +268,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                     <div className="flex gap-4 mt-2">
                         <Button 
                             variant="secondary"
-                            onClick={() => { setAudioBlob(null); setAudioUrl(null); }}
+                            onClick={() => { setAudioBlob(null); setAudioUrl(null); setErrorMsg(''); }}
                             disabled={isProcessing}
                             className="flex-1"
                         >
@@ -238,11 +285,29 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                                     {t.processing}
                                 </span>
                             ) : (
-                                <><CheckCircle className="w-4 h-4 mr-2" /> AI Translate</>
+                                <><CheckCircle className="w-4 h-4 mr-2" /> AI Transcribe</>
                             )}
                         </Button>
                     </div>
-                    {errorMsg && <div className="text-error text-sm text-center font-medium bg-error-container text-on-error-container p-2 rounded-lg">{errorMsg}</div>}
+
+                    {errorMsg && (
+                        <div className="bg-error-container text-on-error-container p-4 rounded-2xl flex items-start gap-3 border border-error/20">
+                            <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="text-sm font-bold">{errorMsg}</p>
+                                <p className="text-xs text-on-error-container/80 mt-1">
+                                    Tip: Speak clearly near the microphone, or use the "Type" option to enter description directly.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => { setAudioBlob(null); setAudioUrl(null); setErrorMsg(''); }}
+                                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-error text-on-error text-xs font-bold shadow-sm"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5" /> Record Again
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -252,30 +317,39 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                         <div className="flex items-center justify-between mb-4 border-b border-surface-container pb-4">
                             <span className="inline-flex items-center gap-1 text-sm text-tertiary font-bold">
                                 <span className="material-symbols-outlined text-[18px]">verified</span>
-                                AI Processed & Translated
+                                AI Processed ({REGIONAL_LANGUAGES.find(l => l.code === (voiceData.detected_language || selectedLang))?.native})
                             </span>
-                            <span className="text-[11px] text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">High Clarity</span>
+                            <button
+                                type="button"
+                                onClick={() => { setVoiceData(null); setAudioBlob(null); setAudioUrl(null); }}
+                                className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" /> Re-record
+                            </button>
                         </div>
                     )}
                     
                     <div className="flex justify-between items-center mb-4">
                         <h4 className="font-bold text-on-surface flex items-center gap-2">
-                            <Type className="w-5 h-5 text-primary" /> Edit Description
+                            <Type className="w-5 h-5 text-primary" /> Product Description
                         </h4>
                     </div>
                     
                     <textarea 
                         dir="auto"
-                        placeholder={t.productGuidanceTypePlaceholder || "Example: Tell us the product name, material, how it is made, size, design and what makes it special..."}
+                        data-guide-id="product-description"
+                        data-help="product-description"
+                        id="product-description"
+                        placeholder={t.productGuidanceTypePlaceholder || "Example: Terracotta clay water pot handmade on traditional wheel with natural burnished red clay finish..."}
                         className="w-full p-4 rounded-2xl border-2 border-surface-container-high bg-surface-container-lowest focus:border-primary focus:ring-0 text-on-surface font-medium leading-relaxed resize-y shadow-inner transition-colors" 
                         value={descriptionText} 
                         onChange={(e) => setDescriptionText(e.target.value)}
                         rows={5} 
                     />
 
-                    {inputMode === 'voice' && voiceData && voiceData.original_text && (
+                    {inputMode === 'voice' && voiceData && voiceData.original_text && voiceData.original_text !== descriptionText && (
                         <div className="mt-4 pt-4 border-t border-surface-container">
-                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Original Audio Transcript</p>
+                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Original Spoken Audio</p>
                             <blockquote className="bg-surface-container-low rounded-xl p-4 text-on-surface italic text-sm border-l-4 border-secondary/50">
                                 "{voiceData.original_text}"
                             </blockquote>
@@ -287,9 +361,9 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
             <div className="bg-secondary-fixed/50 rounded-2xl p-4 mt-2 flex items-start gap-4">
                 <span className="material-symbols-outlined text-secondary text-[22px] mt-0.5">auto_awesome</span>
                 <div className="min-w-0">
-                    <h4 className="font-bold text-on-secondary-fixed text-sm">Next: AI Catalog Formatter</h4>
+                    <h4 className="font-bold text-on-secondary-fixed text-sm">Next: Multilingual AI Catalogue & SEO</h4>
                     <p className="text-sm text-on-secondary-fixed-variant mt-1">
-                        In Step 3, AI will automatically format this description into a professional buyer-ready product passport.
+                        In Step 3, AI formats this description into a professional product catalogue, generates cultural story & SEO tags, and translates into 9 Indian languages.
                     </p>
                 </div>
             </div>
@@ -300,7 +374,12 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                 </Button>
                 <Button 
                     onClick={async () => { 
-                        setVoiceData({ ...voiceData, translated_text: descriptionText, original_text: descriptionText });
+                        setVoiceData({ 
+                            ...voiceData, 
+                            translated_text: descriptionText, 
+                            original_text: voiceData?.original_text || descriptionText,
+                            detected_language: voiceData?.detected_language || selectedLang
+                        });
                         await saveDraft(); 
                         setStep(3); 
                     }}

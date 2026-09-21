@@ -1,23 +1,41 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const getInitialApiUrl = (): string => {
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+export const getApiUrl = (): string => {
     if (typeof window !== 'undefined') {
         const customUrl = localStorage.getItem('artisanx_api_url');
         if (customUrl) return customUrl;
     }
-    // Default fallback to live cloud Render backend
-    return 'https://artisanx.onrender.com';
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+    return 'http://localhost:8000';
 };
 
-export const API_URL = getInitialApiUrl();
+export let API_URL = getApiUrl();
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 35000 // 35-second network timeout to prevent infinite hanging
+    timeout: 90000 // 90-second network timeout for AI pipelines & cloud cold-starts
 });
+
+export const setApiUrl = (newUrl: string): string => {
+    const clean = newUrl.trim().replace(/\/+$/, '');
+    localStorage.setItem('artisanx_api_url', clean);
+    API_URL = clean;
+    api.defaults.baseURL = clean;
+    return clean;
+};
+
+export const testApiConnection = async (testUrl?: string): Promise<{ ok: boolean; status?: number; error?: string }> => {
+    const target = (testUrl || getApiUrl()).replace(/\/+$/, '');
+    try {
+        const res = await axios.get(`${target}/health`, { timeout: 4000 });
+        return { ok: res.status === 200, status: res.status };
+    } catch (err: any) {
+        return { ok: false, error: err.message || 'Connection failed' };
+    }
+};
+
 
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;

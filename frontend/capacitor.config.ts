@@ -4,6 +4,12 @@ const config: CapacitorConfig = {
   appId: 'com.artisanx.app',
   appName: 'ArtisanX',
   webDir: 'dist',
+  plugins: {
+    FirebaseAuthentication: {
+      providers: ["phone"],
+      skipNativeAuth: false,
+    },
+  },
   server: {
     androidScheme: 'https',
     cleartext: true

@@ -1,0 +1,23 @@
+{
+  "model_name": "Lasso Regression",
+  "training_date": "2026-09-21T19:31:35.665524",
+  "dataset_version": "1.0.0_benchmark",
+  "training_rows": 780,
+  "test_rows": 195,
+  "total_features": 652,
+  "tabular_features_count": 140,
+  "text_features_count": 384,
+  "image_features_count": 128,
+  "target": "target_price",
+  "metrics": {
+    "MAE": 182.85,
+    "RMSE": 250.54,
+    "R2": 0.9984,
+    "MAPE": 9.88
+  },
+  "software_versions": {
+    "python": "3.13.9 (tags/v3.13.9:8183fa5, Oct 14 2025, 14:09:13) [MSC v.1944 64 bit (AMD64)]",
+    "pandas": "2.3.3",
+    "numpy": "2.3.5"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "mode": "sentence_transformers",
+  "model_name": "all-MiniLM-L6-v2",
+  "embedding_dim": 64
+}

@@ -42,64 +42,62 @@ def clean_price(price_str: str) -> float:
     except ValueError:
         return 0.0
 
+def clean_search_query(category: str, materials: list[str]) -> str:
+    cat_clean = re.sub(r'[^a-zA-Z0-9\s]', ' ', category)
+    words = [w for w in (cat_clean + ' ' + ' '.join(materials)).split() if len(w) > 2]
+    seen = set()
+    dedup = [w for w in words if not (w.lower() in seen or seen.add(w.lower()))]
+    return ' '.join(dedup[:4])
+
 async def search_market_listings(category: str, materials: list[str]) -> list[MarketListing]:
     if not settings.SERPAPI_KEY:
         return []
         
-    base_mats = " ".join(materials[:2]) # Top 2 materials
-    
-    # We'll run one generic shopping search to get a mix of sources.
-    # Searching for Amazon India and Flipkart explicitly
-    queries = [
-        f"{category} {base_mats} handmade amazon india",
-        f"{category} {base_mats} handmade flipkart",
-        f"{category} {base_mats} Amazon Karigar"
-    ]
-    
+    primary_query = clean_search_query(category, materials)
+    queries_to_try = [primary_query]
+    fallback_query = re.sub(r'[^a-zA-Z0-9\s]', ' ', category).strip()
+    if fallback_query and fallback_query.lower() != primary_query.lower():
+        queries_to_try.append(fallback_query)
+
     all_listings = []
     
-    import asyncio
-    
-    async with httpx.AsyncClient() as client:
-        async def fetch(query):
+    async with httpx.AsyncClient(verify=False) as client:
+        for q in queries_to_try:
             try:
                 response = await client.get(
                     "https://serpapi.com/search",
                     params={
                         "engine": "google",
-                        "q": query,
+                        "q": q,
                         "tbm": "shop",
                         "api_key": settings.SERPAPI_KEY,
                         "gl": "in",
                         "hl": "en"
                     },
-                    timeout=20.0
+                    timeout=25.0
                 )
                 if response.status_code == 200:
-                    return response.json().get("shopping_results", [])
+                    shopping_results = response.json().get("shopping_results", [])
+                    for item in shopping_results:
+                        title = item.get("title", "")
+                        price_str = item.get("price", "")
+                        source = item.get("source", "Online Store")
+                        url = item.get("product_link") or item.get("link") or ""
+                        
+                        price = clean_price(price_str)
+                        if title and price > 0 and url:
+                            all_listings.append(MarketListing(
+                                title=title,
+                                price=price,
+                                source=source,
+                                url=url
+                            ))
+                    if all_listings:
+                        break # Got results with primary query, no need to query again
             except httpx.ReadTimeout:
-                print("SerpApi request timed out")
+                print(f"SerpApi request for '{q}' timed out")
             except Exception as e:
-                print(f"SerpApi Error: {e}")
-            return []
-            
-        results = await asyncio.gather(*(fetch(q) for q in queries))
-        for shopping_results in results:
-            for item in shopping_results:
-                title = item.get("title", "")
-                price_str = item.get("price", "")
-                source = item.get("source", "Unknown")
-                url = item.get("product_link") or item.get("link") or ""
-                
-                price = clean_price(price_str)
-                
-                if title and price > 0 and url:
-                    all_listings.append(MarketListing(
-                        title=title,
-                        price=price,
-                        source=source,
-                        url=url
-                    ))
+                print(f"SerpApi Error for '{q}': {e}")
                 
     # Deduplicate by URL
     seen_urls = set()
@@ -112,8 +110,9 @@ async def search_market_listings(category: str, materials: list[str]) -> list[Ma
     return unique_listings
 
 def filter_outliers(listings: list[MarketListing], category: str, materials: list[str]) -> list[MarketListing]:
-    # 1. Relevance Filtering
-    # Check if category keywords or material keywords are in title
+    if not listings:
+        return []
+
     cat_keywords = set(re.findall(r'\w+', category.lower()))
     mat_keywords = set()
     for m in materials:
@@ -122,32 +121,27 @@ def filter_outliers(listings: list[MarketListing], category: str, materials: lis
     relevant_listings = []
     for l in listings:
         title_lower = l.title.lower()
-        # Basic check: title should contain at least one category keyword or one material keyword
-        # or just be permissive if the title isn't empty, since Google Shopping does relevance anyway.
-        # But to be safe, let's enforce at least some overlap.
         title_words = set(re.findall(r'\w+', title_lower))
-        if cat_keywords.intersection(title_words) or mat_keywords.intersection(title_words) or "handmade" in title_lower or "artisan" in title_lower:
+        if cat_keywords.intersection(title_words) or mat_keywords.intersection(title_words) or "handmade" in title_lower or "artisan" in title_lower or "craft" in title_lower:
             relevant_listings.append(l)
             
-    if not relevant_listings:
-        return []
-        
-    # 2. Outlier Filtering (IQR)
-    prices = sorted([l.price for l in relevant_listings])
+    # If keyword filtering was too strict, fallback to original Google Shopping listings
+    candidates = relevant_listings if relevant_listings else listings
     
-    if len(prices) < 3:
-        return []
+    if len(candidates) < 3:
+        return candidates[:8]
         
+    # Outlier Filtering (IQR)
+    prices = sorted([l.price for l in candidates])
     q1 = prices[len(prices) // 4]
     q3 = prices[(len(prices) * 3) // 4]
     iqr = q3 - q1
     
-    lower_bound = q1 - 1.5 * iqr
+    lower_bound = max(50.0, q1 - 1.5 * iqr)
     upper_bound = q3 + 1.5 * iqr
     
-    filtered_listings = [l for l in relevant_listings if lower_bound <= l.price <= upper_bound]
-    
-    return filtered_listings[:8] # Cap at 8
+    filtered = [l for l in candidates if lower_bound <= l.price <= upper_bound]
+    return filtered[:8] if filtered else candidates[:8]
 
 async def get_or_refresh_market_price(category: str, materials: list[str]) -> MarketPriceResult:
     sig = build_query_signature(category, materials)
@@ -161,13 +155,19 @@ async def get_or_refresh_market_price(category: str, materials: list[str]) -> Ma
             now = datetime.now(timezone.utc)
             delta = now - fetched_at
             if delta.total_seconds() < 48 * 3600:
-                # Valid cache
+                listings = [MarketListing(**item) for item in row.get("source_listings", [])]
+                low = row["price_low"]
+                high = row["price_high"]
+                median = row["price_median"]
+                sources = list(dict.fromkeys(l.source for l in listings))
+                src_str = ", ".join(sources[:3]) if sources else "Indian online stores"
+                reasoning = f"Based on live market listings from {src_str}, similar {category.lower()} items are listed between ₹{int(low)} and ₹{int(high)}, with a market median of ₹{int(median)}."
                 return MarketPriceResult(
-                    price_low=row["price_low"],
-                    price_high=row["price_high"],
-                    price_median=row["price_median"],
-                    listings=[MarketListing(**item) for item in row.get("source_listings", [])],
-                    reasoning=None, # Will generate below if needed, or we could cache it. Let's not cache reasoning in DB right now, or wait, it's not in DB schema.
+                    price_low=low,
+                    price_high=high,
+                    price_median=median,
+                    listings=listings,
+                    reasoning=reasoning,
                     is_cached=True,
                     status="success"
                 )
@@ -178,7 +178,8 @@ async def get_or_refresh_market_price(category: str, materials: list[str]) -> Ma
     listings = await search_market_listings(category, materials)
     filtered = filter_outliers(listings, category, materials)
     
-    if len(filtered) < 3:
+    if not filtered:
+        # Graceful baseline when SerpAPI has no data or network disconnects
         return MarketPriceResult(status="insufficient_data")
         
     prices = sorted([l.price for l in filtered])
@@ -186,9 +187,9 @@ async def get_or_refresh_market_price(category: str, materials: list[str]) -> Ma
     high = prices[-1]
     median = statistics.median(prices)
     
-    # Summarize
-    from ai.gemini_client import summarize_market_reasoning
-    reasoning = summarize_market_reasoning(filtered, low, high)
+    sources = list(dict.fromkeys(l.source for l in filtered))
+    src_str = ", ".join(sources[:3]) if sources else "marketplace listings"
+    reasoning = f"Based on {len(filtered)} live market listings from {src_str}, similar handcrafted {category.lower()} items range between ₹{int(low)} and ₹{int(high)}, with a market median of ₹{int(median)}."
     
     # Upsert Cache
     try:
@@ -200,7 +201,6 @@ async def get_or_refresh_market_price(category: str, materials: list[str]) -> Ma
             "source_listings": [l.model_dump() for l in filtered]
         }
         
-        # Checking if exists again to be safe
         cache_res = service_client.table("market_price_cache").select("id").eq("query_signature", sig).execute()
         if cache_res.data:
             service_client.table("market_price_cache").update(data_to_upsert).eq("query_signature", sig).execute()

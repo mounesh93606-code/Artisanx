@@ -1,0 +1,34 @@
+{
+  "model_version": "v001",
+  "feature_version": "v001",
+  "training_date": "2026-09-19T08:38:53.492431+00:00",
+  "training_rows": 16,
+  "validation_rows": 5,
+  "metrics": {
+    "mae": 4530.15,
+    "rmse": 5955.2,
+    "r2": 0.5784,
+    "median_absolute_error": 2841.41,
+    "training_rows": 16,
+    "validation_rows": 5,
+    "category_evaluation": {
+      "Apparel & Textiles": {
+        "sample_count": 1
+      },
+      "Art & Paintings": {
+        "sample_count": 1
+      },
+      "Footwear": {
+        "sample_count": 1
+      },
+      "Home Decor": {
+        "mae": 1691.21,
+        "rmse": 2045.27,
+        "r2": 0.0,
+        "median_absolute_error": 1691.21
+      }
+    }
+  },
+  "model_path": "C:\\Users\\moune\\art\\data\\models\\price_model_v001.pkl",
+  "latest_path": "C:\\Users\\moune\\art\\data\\models\\price_model_latest.pkl"
+}

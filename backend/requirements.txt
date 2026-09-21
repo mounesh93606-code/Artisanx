@@ -17,4 +17,7 @@ bcrypt
 opencv-python-headless
 numpy
 google-genai
+scikit-learn
+joblib
+pandas
 

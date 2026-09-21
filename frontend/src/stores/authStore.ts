@@ -19,7 +19,7 @@ interface AuthState {
     sendOtp: (phone: string) => Promise<void>;
     verifyOtp: (phone: string, token: string) => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<void>;
-    registerWithEmail: (email: string, password: string, role?: 'artisan' | 'buyer' | 'facilitator') => Promise<void>;
+    registerWithEmail: (email: string, password: string, role?: 'artisan' | 'buyer' | 'facilitator', phone?: string) => Promise<void>;
     setRole: (role: 'artisan' | 'buyer' | 'facilitator') => Promise<void>;
     updateProfile: (data: Record<string, any>) => Promise<void>;
     logout: () => void;
@@ -82,10 +82,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    registerWithEmail: async (email, password, role) => {
+    registerWithEmail: async (email, password, role, phone) => {
         set({ isLoading: true, error: null });
         try {
-            const { data } = await api.post('/auth/register', { email, password });
+            const { data } = await api.post('/auth/register', { email, password, phone });
             
             if (data.access_token) {
                 localStorage.setItem('auth_token', data.access_token);

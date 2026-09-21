@@ -1,1 +1,2 @@
-export function OtpVerify() { return <div>OTP Verify</div>; }
+export { default as OtpInput } from './OtpInput';
+export * from './OtpInput';

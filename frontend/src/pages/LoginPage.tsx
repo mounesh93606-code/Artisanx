@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import OtpInput from '../components/auth/OtpInput';
+import { getApiUrl, setApiUrl } from '../lib/api';
 
 const languages = [
   { code: 'en', label: 'English', native: 'English' },
@@ -13,11 +15,11 @@ const languages = [
   { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
   { code: 'te', label: 'Telugu', native: 'తెలుగు' },
   { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
   { code: 'bn', label: 'Bengali', native: 'বাংলা' },
   { code: 'mr', label: 'Marathi', native: 'मराठी' },
   { code: 'ur', label: 'Urdu', native: 'اردو' }
 ];
+
 
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -34,8 +36,19 @@ const LoginPage: React.FC = () => {
   // Email state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [regSuccessMessage, setRegSuccessMessage] = useState('');
+  const [currentServerUrl, setCurrentServerUrl] = useState(getApiUrl());
+
+  const handleSwitchServer = (url: string) => {
+    setApiUrl(url);
+    setCurrentServerUrl(url);
+    clearError();
+  };
 
   const handleLangChange = (newLang: string) => {
     setLanguage(newLang);
@@ -59,22 +72,31 @@ const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     clearError();
-    if (!phone) return;
-    const fullPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
+    const cleanPhone = phone.replace('+91', '').trim();
+    if (!cleanPhone) return;
+    const fullPhone = `+91${cleanPhone}`;
+
     await sendOtp(fullPhone);
-    setOtpSent(true);
-    setTimer(60);
+    const storeError = useAuthStore.getState().error;
+    if (!storeError) {
+      setOtpSent(true);
+      setTimer(60);
+    }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyOtp = async (e?: React.FormEvent, customOtp?: string) => {
+    if (e) e.preventDefault();
     clearError();
-    if (!otp || otp.length !== 6) return;
-    const fullPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-    await verifyOtp(fullPhone, otp);
+    const tokenToVerify = customOtp || otp;
+    if (!tokenToVerify || tokenToVerify.length !== 6) return;
+    const cleanPhone = phone.replace('+91', '').trim();
+    if (!cleanPhone) return;
+    const fullPhone = `+91${cleanPhone}`;
+
+    await verifyOtp(fullPhone, tokenToVerify);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -83,7 +105,16 @@ const LoginPage: React.FC = () => {
     setRegSuccessMessage('');
     if (!email || !password) return;
     if (isRegistering) {
-      await registerWithEmail(email, password);
+      if (password !== confirmPassword) {
+        useAuthStore.setState({ error: 'Passwords do not match.' });
+        return;
+      }
+      if (password.length < 6) {
+        useAuthStore.setState({ error: 'Password must be at least 6 characters.' });
+        return;
+      }
+      const fullRegPhone = regPhone.trim() ? (regPhone.startsWith('+91') ? regPhone : `+91${regPhone.trim()}`) : undefined;
+      await registerWithEmail(email, password, undefined, fullRegPhone);
       const state = useAuthStore.getState();
       if (!state.error && !state.isAuthenticated && state.user) {
         setRegSuccessMessage('Registration successful! Please check your email to verify your account.');
@@ -168,7 +199,7 @@ const LoginPage: React.FC = () => {
             {error && (
               <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-xl text-sm font-semibold flex items-start gap-2">
                 <span className="material-symbols-outlined text-[18px]">error</span>
-                {error}
+                <div className="flex-1">{error}</div>
               </div>
             )}
             {regSuccessMessage && (
@@ -178,61 +209,134 @@ const LoginPage: React.FC = () => {
               </div>
             )}
 
+
             {tab === 'phone' && (
-              <>
-                {!otpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.phone')}</label>
-                      <div className="flex rounded-xl overflow-hidden border border-outline-variant bg-surface-container-lowest focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors">
-                        <span className="inline-flex items-center px-4 bg-surface-container-low text-on-surface-variant text-sm font-bold border-r border-outline-variant">
-                          +91
-                        </span>
-                        <input 
-                          type="tel" 
-                          value={phone.replace('+91', '')} 
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="flex-1 block w-full min-w-0 sm:text-sm p-4 border-0 focus:ring-0 bg-transparent text-on-surface font-medium"
-                          placeholder={t('auth.enter_phone')}
-                        />
-                      </div>
-                    </div>
-                    <Button type="submit" disabled={isLoading || !phone} fullWidth>
-                      {isLoading ? t('common.loading') : t('auth.send_otp')}
-                    </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleVerifyOtp} className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.enter_otp')}</label>
-                      <Input 
-                        type="text" 
-                        maxLength={6}
-                        value={otp} 
-                        onChange={(e) => setOtp(e.target.value)}
-                        className="text-center text-2xl font-bold tracking-[0.5em]"
-                        placeholder="------"
-                      />
-                    </div>
-                    <Button type="submit" disabled={isLoading || otp.length !== 6} fullWidth>
-                      {isLoading ? t('common.loading') : t('auth.verify')}
-                    </Button>
-                    <div className="text-center mt-6">
-                      {timer > 0 ? (
-                        <p className="text-sm font-medium text-on-surface-variant">{t('auth.resend_otp')} in {timer}s</p>
+              <div className="space-y-5">
+                {/* Phone Number Input */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-bold text-on-surface">
+                      {t('auth.phone')}
+                    </label>
+                    {otpSent && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtp('');
+                        }}
+                        className="text-xs text-primary font-bold hover:underline"
+                      >
+                        Change Number
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex rounded-xl overflow-hidden border border-outline-variant bg-surface-container-lowest focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                    <span className="inline-flex items-center px-4 bg-surface-container-low text-on-surface-variant text-sm font-bold border-r border-outline-variant select-none">
+                      +91
+                    </span>
+                    <input 
+                      type="tel" 
+                      value={phone.replace('+91', '')} 
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      disabled={isLoading || (otpSent && timer > 0)}
+                      className="flex-1 block w-full min-w-0 sm:text-base p-3.5 border-0 focus:ring-0 bg-transparent text-on-surface font-semibold placeholder:text-stone-400"
+                      placeholder={t('auth.enter_phone')}
+                    />
+                    <button
+                      type="button"
+                      disabled={isLoading || phone.replace('+91', '').trim().length < 10 || (otpSent && timer > 0)}
+                      onClick={() => handleSendOtp()}
+                      className={`px-4 py-2 text-xs font-bold transition-all border-l border-outline-variant/60 flex items-center gap-1.5 whitespace-nowrap
+                        ${(otpSent && timer > 0)
+                          ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed'
+                          : phone.replace('+91', '').trim().length >= 10
+                            ? 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'
+                            : 'bg-surface-container-low text-stone-400 cursor-not-allowed'
+                        }`}
+                    >
+                      {isLoading && !otpSent ? (
+                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                       ) : (
-                        <button type="button" onClick={handleSendOtp} className="text-sm text-primary font-bold hover:underline">
-                          {t('auth.resend_otp')}
-                        </button>
+                        <span className="material-symbols-outlined text-sm">sms</span>
                       )}
-                    </div>
-                  </form>
-                )}
-              </>
+                      {otpSent ? (timer > 0 ? `${timer}s` : t('auth.resend_otp')) : t('auth.send_otp')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* OTP Box */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-bold text-on-surface">
+                      {t('auth.enter_otp')}
+                    </label>
+                    {otpSent && (
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                        OTP Sent
+                      </span>
+                    )}
+                  </div>
+                  
+                  <OtpInput
+                    value={otp}
+                    onChange={setOtp}
+                    length={6}
+                    disabled={isLoading}
+                    autoFocus={otpSent}
+                    onComplete={(completedOtp) => handleVerifyOtp(undefined, completedOtp)}
+                    error={!!error && otp.length === 6}
+                  />
+
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    {timer > 0 ? (
+                      <span className="text-on-surface-variant font-medium">
+                        {t('auth.resend_otp')} in <span className="font-bold text-primary">{timer}s</span>
+                      </span>
+                    ) : otpSent ? (
+                      <button 
+                        type="button" 
+                        onClick={() => handleSendOtp()} 
+                        disabled={isLoading}
+                        className="text-primary font-bold hover:underline"
+                      >
+                        {t('auth.resend_otp')}
+                      </button>
+                    ) : (
+                      <span className="text-stone-400 font-medium">
+                        Enter 10-digit number & tap Send OTP
+                      </span>
+                    )}
+
+                    {otp.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setOtp('')}
+                        className="text-stone-400 hover:text-stone-600 font-medium"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit Action */}
+                <div className="pt-2">
+                  <Button 
+                    type="button" 
+                    onClick={() => handleVerifyOtp()} 
+                    disabled={isLoading || otp.length !== 6 || phone.replace('+91', '').trim().length < 10} 
+                    fullWidth
+                  >
+                    {isLoading ? t('common.loading') : t('auth.verify')}
+                  </Button>
+                </div>
+              </div>
             )}
 
             {tab === 'email' && (
-              <form onSubmit={handleEmailAuth} className="space-y-5">
+              <form onSubmit={handleEmailAuth} className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.email')}</label>
                   <Input 
@@ -242,24 +346,89 @@ const LoginPage: React.FC = () => {
                     placeholder={t('auth.email')}
                   />
                 </div>
+
+                {isRegistering && (
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-2">
+                      {t('auth.phone')} <span className="text-xs font-normal text-stone-400">(Optional)</span>
+                    </label>
+                    <div className="flex rounded-xl overflow-hidden border border-outline-variant bg-surface-container-lowest focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                      <span className="inline-flex items-center px-3.5 bg-surface-container-low text-on-surface-variant text-sm font-bold border-r border-outline-variant select-none">
+                        +91
+                      </span>
+                      <input 
+                        type="tel" 
+                        value={regPhone} 
+                        onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="flex-1 block w-full min-w-0 text-sm p-3.5 border-0 focus:ring-0 bg-transparent text-on-surface font-semibold placeholder:text-stone-400"
+                        placeholder={t('auth.enter_phone')}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-bold text-on-surface mb-2">{t('auth.password')}</label>
-                  <Input 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('auth.password')}
-                  />
+                  <div className="relative flex items-center">
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={t('auth.password')}
+                      className="w-full pr-12 text-sm p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface font-medium"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-stone-400 hover:text-on-surface transition-colors focus:outline-none"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <span className="material-symbols-outlined text-xl select-none">
+                        {showPassword ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
+
+                {isRegistering && (
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-2">Confirm Password</label>
+                    <div className="relative flex items-center">
+                      <input 
+                        type={showConfirmPassword ? 'text' : 'password'} 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter your password"
+                        className="w-full pr-12 text-sm p-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface font-medium"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3.5 text-stone-400 hover:text-on-surface transition-colors focus:outline-none"
+                        tabIndex={-1}
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <span className="material-symbols-outlined text-xl select-none">
+                          {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2">
-                  <Button type="submit" disabled={isLoading || !email || !password} fullWidth>
+                  <Button type="submit" disabled={isLoading || !email || !password || (isRegistering && !confirmPassword)} fullWidth>
                     {isLoading ? t('common.loading') : (isRegistering ? t('auth.register') : t('auth.login'))}
                   </Button>
                 </div>
                 <div className="text-center mt-6">
                   <button 
                     type="button" 
-                    onClick={() => setIsRegistering(!isRegistering)}
+                    onClick={() => {
+                      clearError();
+                      setIsRegistering(!isRegistering);
+                    }}
                     className="text-sm text-primary font-bold hover:underline"
                   >
                     {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
@@ -270,10 +439,37 @@ const LoginPage: React.FC = () => {
           </div>
         </Card>
         
-        <div className="flex justify-center items-center gap-2 mt-4 text-xs font-semibold text-on-surface-variant">
-          <span className="material-symbols-outlined text-[16px] text-tertiary">lock</span>
-          Secure & Government Compliant
+        <div className="flex flex-col justify-center items-center gap-2 mt-4 text-xs font-semibold text-on-surface-variant">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px] text-tertiary">lock</span>
+            Secure & Government Compliant
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => handleSwitchServer('http://localhost:8000')}
+              className={`px-3 py-1 text-[11px] font-bold rounded-full transition-all border ${
+                currentServerUrl.includes('localhost')
+                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  : 'bg-surface-container-low text-on-surface-variant border-outline-variant/30 hover:bg-surface-container'
+              }`}
+            >
+              USB: localhost:8000
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchServer('http://192.168.40.172:8000')}
+              className={`px-3 py-1 text-[11px] font-bold rounded-full transition-all border ${
+                currentServerUrl.includes('192.168.40.172')
+                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  : 'bg-surface-container-low text-on-surface-variant border-outline-variant/30 hover:bg-surface-container'
+              }`}
+            >
+              Wi-Fi: 192.168.40.172:8000
+            </button>
+          </div>
         </div>
+
       </main>
     </div>
   );

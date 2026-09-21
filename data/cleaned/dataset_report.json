@@ -1,0 +1,32 @@
+{
+  "total_raw_records": 21,
+  "total_clean_records": 21,
+  "duplicates_removed": 0,
+  "invalid_prices_removed": 0,
+  "suspicious_records": 0,
+  "missing_price_count": 0,
+  "missing_image_count": 0,
+  "source_counts": {
+    "india_crafts_open_catalog": 10,
+    "curated_handicraft_market": 8,
+    "traditional_handloom_registry": 3
+  },
+  "category_counts": {
+    "Home Decor": 5,
+    "Apparel & Textiles": 4,
+    "Kitchen & Dining": 3,
+    "Art & Collectibles": 2,
+    "Jewelry": 2,
+    "Art & Paintings": 2,
+    "Toys & Games": 1,
+    "Bags & Accessories": 1,
+    "Footwear": 1
+  },
+  "minimum_price": 420.0,
+  "maximum_price": 24500.0,
+  "median_price": 1750.0,
+  "collection_date_range": {
+    "start": "2026-09-19T08:37:19.998156+00:00",
+    "end": "2026-09-19T08:37:19.998156+00:00"
+  }
+}

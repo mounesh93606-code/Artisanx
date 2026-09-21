@@ -1,0 +1,36 @@
+sources:
+  - name: "india_crafts_open_catalog"
+    display_name: "Indian Handicrafts Open Catalog"
+    enabled: true
+    allowed: true
+    source_type: "open_catalog"
+    base_url: "https://data.gov.in/resource/handicrafts"
+    rate_limit_delay: 1.0
+    description: "Permitted open access repository of authentic Indian handicrafts, GI crafts, and traditional cluster items."
+
+  - name: "curated_handicraft_market"
+    display_name: "Curated Artisanal Marketplace Data"
+    enabled: true
+    allowed: true
+    source_type: "curated_market"
+    base_url: "https://artisanx-market-data.internal/v1"
+    rate_limit_delay: 0.5
+    description: "Verified historical market transactions and benchmark pricing across Indian craft categories."
+
+  - name: "traditional_handloom_registry"
+    display_name: "National Handloom & Textile Registry"
+    enabled: true
+    allowed: true
+    source_type: "public_registry"
+    base_url: "https://handlooms.nic.in/market"
+    rate_limit_delay: 1.5
+    description: "Public domain specifications and market price bands for handloom and silk weaving products."
+
+  - name: "prohibited_stealth_scraper"
+    display_name: "Blocked Commercial Scraper"
+    enabled: false
+    allowed: false
+    source_type: "restricted"
+    base_url: "https://restricted-site.com"
+    rate_limit_delay: 5.0
+    description: "Disabled source that requires bypass or violates robots.txt (strictly excluded)."

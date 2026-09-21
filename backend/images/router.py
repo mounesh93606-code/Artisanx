@@ -19,11 +19,26 @@ def route_upload_image(
 @router.post("/enhance/{image_id}", response_model=schemas.ImageUploadResponse)
 def route_enhance_image(
     image_id: str, 
+    background_type: str = Query("studio"),
+    brightness: float = Query(0.0),
+    contrast: float = Query(0.0),
+    rotate: int = Query(0),
+    add_shadow: bool = Query(True),
     use_rembg: bool = Query(True),
     current_user: Any = Depends(get_current_user),
     token: str = Depends(get_token)
 ):
-    return service.enhance_image(image_id, current_user["id"], token, use_rembg)
+    return service.enhance_image(
+        image_id=image_id,
+        artisan_id=current_user["id"],
+        token=token,
+        background_type=background_type,
+        brightness=brightness,
+        contrast=contrast,
+        rotate=rotate,
+        add_shadow=add_shadow,
+        use_rembg=use_rembg
+    )
 
 @router.post("/quality-check/{image_id}", response_model=schemas.ImageQualityCheck)
 def route_check_quality(image_id: str, current_user: Any = Depends(get_current_user), token: str = Depends(get_token)):

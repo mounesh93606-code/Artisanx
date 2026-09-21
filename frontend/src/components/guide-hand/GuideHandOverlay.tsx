@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Volume2 } from 'lucide-react';
 import { useGuidanceStore } from '../../stores/guidanceStore';
 import { useProductStore } from '../../stores/productStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -43,6 +43,7 @@ export default function GuideHandOverlay() {
     direction: 'up'
   });
   const [warningMsg, setWarningMsg] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const searchTimeoutRef = useRef<number | null>(null);
 
   const currentLang = i18n.language || authLang || user?.preferred_language || 'en';
@@ -64,7 +65,10 @@ export default function GuideHandOverlay() {
               ta: 'உங்கள் கைவினைப்பொருளின் புகைப்படத்தை எடுக்கவும். தொடர்வதற்கு முன் குறைந்தது 1 புகைப்படம் தேவை.',
               te: 'మీ చేతిపని ఫోటో తీయండి లేదా అప్‌లోడ్ చేయండి. కొనసాగడానికి కనీసం 1 ఫోటో అవసరం.',
               kn: 'ನಿಮ್ಮ ಕಲೆಯ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ. ಮುಂದುವರಿಯಲು ಕನಿಷ್ಠ 1 ಫೋಟೋ ಅಗತ್ಯವಿದೆ.',
-              ml: 'നിങ്ങളുടെ കരകൗശല വസ്തുവിന്റെ ഫോട്ടോ എടുക്കുക. തുടരുന്നതിന് കുറഞ്ഞത് 1 ഫോട്ടോ ആവശ്യമാണ്.'
+              ml: 'നിങ്ങളുടെ കരകൗശല വസ്തുവിന്റെ ഫോട്ടോ എടുക്കുക. തുടരുന്നതിന് കുറഞ്ഞത് 1 ഫോട്ടോ ആവശ്യമാണ്.',
+              bn: 'আপনার কারুশিল্পের একটি ছবি তুলুন বা আপলোড করুন। এগিয়ে যাওয়ার আগে অন্তত ১টি ছবি প্রয়োজন।',
+              mr: 'तुमच्या हस्तकलेचा एक फोटो काढा किंवा अपलोड करा. पुढे जाण्यापूर्वी किमान १ फोटो आवश्यक आहे.',
+              ur: 'اپنے ہنر کی تصویر لیں یا اپ لوڈ کریں۔ آگے بڑھنے سے پہلے کم از کم 1 تصویر درکار ہے۔'
             }
           };
         case 2:
@@ -77,7 +81,10 @@ export default function GuideHandOverlay() {
               ta: 'மைக்கைத் தட்டி உங்கள் தாய்மொழியில் கைவினைப்பொருளை விவரிக்கவும், அல்லது தட்டச்சு செய்யவும்.',
               te: 'మైక్ నొక్కండి మరియు మీ స్వంత భాషలో మీ చేతిపనిని వివరించండి, లేదా టైప్ చేయండి.',
               kn: 'ಮೈಕ್ ಟ್ಯಾಪ್ ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ ವಿವರಿಸಿ, ಅಥವಾ ಕೆಳಗೆ ಟೈಪ್ ಮಾಡಿ.',
-              ml: 'മൈക്ക് ടാപ്പ് ചെയ്ത് നിങ്ങളുടെ സ്വന്തം ഭാഷയിൽ ഉൽപ്പന്നം വിവരിക്കുക, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യുക.'
+              ml: 'മൈക്ക് ടാപ്പ് ചെയ്ത് നിങ്ങളുടെ സ്വന്തം ഭാഷയിൽ ഉൽപ്പന്നം വിവരിക്കുക, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യുക.',
+              bn: 'মাইকে আলতো চাপুন এবং আপনার মাতৃভাষায় আপনার নৈপুণ্যের বর্ণনা দিন, বা আপনার বিবরণ টাইপ করুন।',
+              mr: 'माइकवर टॅप करा आणि आपल्या भाषेत आपल्या हस्तकलेचे वर्णन करा किंवा खाली टाइप करा.',
+              ur: 'مائیک پر ٹیپ کریں اور اپنی مادری زبان میں اپنے دستکاری کی وضاحت کریں، یا اپنی تفصیل ٹائپ کریں۔'
             }
           };
         case 3:
@@ -90,7 +97,10 @@ export default function GuideHandOverlay() {
               ta: 'AI உருவாக்கிய விவரங்களைச் சரிபார்க்கவும். திருத்த விரும்பினால் பென்சில் ஐகானைத் தட்டவும்.',
               te: 'AI రూపొందించిన కేటలాగ్ వివరాలను సమీక్షించండి. దేనినైనా సవరించడానికి ఎడిట్ నొక్కండి.',
               kn: 'AI ರಚಿಸಿದ ಕ್ಯಾಟಲಾಗ್ ಪರಿಶೀಲಿಸಿ. ಅಗತ್ಯವಿದ್ದರೆ ಸಂಪಾದಿಸಿ.',
-              ml: 'AI തയ്യാറാക്കിയ കാറ്റലോഗ് വിവരങ്ങൾ പരിശോധിക്കുക. ആവശ്യമെങ്കിൽ തിരുത്തുക.'
+              ml: 'AI തയ്യാറാക്കിയ കാറ്റലോഗ് വിവരങ്ങൾ പരിശോധിക്കുക. ആവശ്യമെങ്കിൽ തിരുത്തുക.',
+              bn: 'AI-উত্পন্ন ক্যাটালগ বিবরণ পর্যালোচনা করুন। কোনো বিবরণ কাস্টমাইজ করতে সম্পাদনা আইকনে আলতো চাপুন।',
+              mr: 'AI-व्युत्पन्न कॅटलॉग तपशीलांचे पुनरावलोकन करा. कोणताही तपशील सानुकूलित करण्यासाठी संपादन चिन्हावर टॅप करा.',
+              ur: 'AI کی تیار کردہ کیٹلاگ کی تفصیلات کا جائزہ لیں۔ کسی بھی تفصیل کو اپنی مرضی کے مطابق بنانے کے لیے ترمیم کے آئیکون پر ٹیپ کریں۔'
             }
           };
         case 4:
@@ -98,25 +108,31 @@ export default function GuideHandOverlay() {
             title: 'Step 4 of 7: Raw Materials',
             targetId: 'materials-section',
             instruction: {
-              en: 'List raw materials and craft time to ensure your price covers fair artisan wages.',
-              hi: 'कच्चे माल और श्रम समय जोड़ें ताकि उचित मजदूरी और न्यूनतम लागत तय हो सके।',
+              en: 'Enter raw materials and labor to ensure your true costs are protected.',
+              hi: 'कच्चे माल और श्रम को दर्ज करें ताकि आपकी वास्तविक लागत सुरक्षित रहे।',
               ta: 'நியாயமான கூலி மற்றும் செலவைக் கணக்கிட மூலப்பொருட்களைப் பட்டியலிடுங்கள்.',
               te: 'సరైన ధరను లెక్కించడానికి ముడి పదార్థాలు మరియు శ్రమ సమయాన్ని నమోదు చేయండి.',
               kn: 'ನ್ಯಾಯಯುತ ಬೆಲೆಯನ್ನು ಲೆಕ್ಕಹಾಕಲು ಕಚ್ಚಾ ವಸ್ತುಗಳನ್ನು ಸೇರಿಸಿ.',
-              ml: 'ന്യായമായ കൂലി ഉറപ്പാക്കാൻ അസംസ്കൃത വസ്തുക്കളുടെ വിവരങ്ങൾ നൽകുക.'
+              ml: 'ന്യായമായ കൂലി ഉറപ്പാക്കാൻ അസംസ്കൃത വസ്തുക്കളുടെ വിവരങ്ങൾ നൽകുക.',
+              bn: 'আপনার প্রকৃত খরচ সুরক্ষিত রাখতে কাঁচামাল এবং শ্রমের বিবরণ লিখুন।',
+              mr: 'तुमचे खरे खर्च सुरक्षित ठेवण्यासाठी कच्चा माल आणि मजुरीची नोंद करा.',
+              ur: 'اپنے حقیقی اخراجات کی حفاظت کو یقینی بنانے کے لیے خام مال اور مزدوری درج کریں۔'
             }
           };
         case 5:
           return {
-            title: 'Step 5 of 7: Dynamic Fair Pricing',
+            title: 'Step 5 of 7: Pricing & Market Intelligence',
             targetId: 'price',
             instruction: {
-              en: 'Check the AI suggested price and market comparison, then enter your final selling price.',
-              hi: 'AI द्वारा सुझाए गए मूल्य और बाज़ार तुलना को देखें, फिर अपना विक्रय मूल्य दर्ज करें।',
-              ta: 'AI பரிந்துரைத்த விலை மற்றும் சந்தை ஒப்பீட்டைப் பார்த்து, உங்கள் இறுதி விலையை உள்ளிடவும்.',
-              te: 'AI సూచించిన ధరను పరిశీలించి, మీ తుది అమ్మకపు ధరను నమోదు చేయండి.',
-              kn: 'AI ಸೂಚಿಸಿದ ಬೆಲೆಯನ್ನು ಪರಿಶೀಲಿಸಿ, ನಿಮ್ಮ ಅಂತಿಮ ಮಾರಾಟ ಬೆಲೆಯನ್ನು ನಮೂದಿಸಿ.',
-              ml: 'AI നിർദ്ദേശിച്ച വില പരിശോധിച്ച് നിങ്ങളുടെ വിൽപന വില നിശ്ചയിക്കുക.'
+              en: 'Review the fair pricing calculation and live market comparisons to set a profitable price.',
+              hi: 'एक लाभदायक मूल्य निर्धारित करने के लिए उचित मूल्य गणना और लाइव बाज़ार तुलना की समीक्षा करें।',
+              ta: 'லாபகரமான விலையை நிர்ணயிக்க நியாயமான விலைக் கணக்கீடு மற்றும் நேரடி சந்தை ஒப்பீடுகளை மதிப்பாய்வு செய்யவும்.',
+              te: 'లాభదాయకమైన ధరను నిర్ణయించడానికి సరసమైన ధర లెక్కింపు మరియు ప్రత్యక్ష మార్కెట్ పోలికలను సమీక్షించండి.',
+              kn: 'ಲಾಭದಾಯಕ ಬೆಲೆಯನ್ನು ನಿಗದಿಪಡಿಸಲು ನ್ಯಾಯಯುತ ಬೆಲೆ ಲೆಕ್ಕಾಚಾರ ಮತ್ತು ಲೈವ್ ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.',
+              ml: 'ലാഭകരമായ വില നിശ്ചയിക്കുന്നതിന് ന്യായമായ വില കണക്കുകൂട്ടലും തത്സമയ വിപണി താരതಮ്യങ്ങളും പരിശോധിക്കുക.',
+              bn: 'একটি লাভজনক মূল্য নির্ধারণ করতে ন্যায্য মূল্যের হিসাব এবং লাইভ বাজার তুলনা পর্যালোচনা করুন।',
+              mr: 'फायदेशीर किंमत निश्चित करण्यासाठी वाजवी किंमत गणना आणि थेट बाजार तुलनेचे पुनरावलोकन करा.',
+              ur: 'منافع بخش قیمت مقرر کرنے کے لیے مناسب قیمت کے حساب اور لائیو مارکیٹ کے موازنہ کا جائزہ لیں۔'
             }
           };
         case 6:
@@ -129,7 +145,10 @@ export default function GuideHandOverlay() {
               ta: 'உங்கள் தயாரிப்பு கையிருப்பு மற்றும் குறைந்தபட்ச ஆர்டர் அளவைக் குறிப்பிடவும்.',
               te: 'మీ వద్ద ఉన్న స్టాక్ పరిమాణాన్ని నమోదు చేయండి.',
               kn: 'ಲಭ್ಯವಿರುವ ಸ್ಟಾಕ್ ಪ್ರಮಾಣವನ್ನು ನಮೂದಿಸಿ.',
-              ml: 'ലഭ്യമായ സ്റ്റോക്ക് അളവ് രേഖപ്പെടുത്തുക.'
+              ml: 'ലഭ്യമായ സ്റ്റോക്ക് അളവ് രേഖപ്പെടുത്തുക.',
+              bn: 'আপনার উপলব্ধ স্টক পরিমাণ এবং সর্বনিম্ন অর্ডারের প্রয়োজনীয়তা নির্দিষ্ট করুন।',
+              mr: 'तुमचा उपलब्ध स्टॉक आणि किमान ऑर्डर आवश्यकता निर्दिष्ट करा.',
+              ur: 'اپنی دستیاب اسٹاک کی مقدار اور کم از کم آرڈر کی ضروریات کی وضاحت کریں۔'
             }
           };
         case 7:
@@ -142,7 +161,10 @@ export default function GuideHandOverlay() {
               ta: 'தயார்நிலை மதிப்பெண்ணைச் சரிபார்த்து (70%+), சந்தையில் வெளியிட தட்டவும்!',
               te: 'సంసిద్ధత స్కోర్‌ను తనిఖీ చేసి, మార్కెట్‌ప్లేస్‌లో విడుదల చేయడానికి ప్రచురించు నొక్కండి!',
               kn: 'ಸಿದ್ಧತೆ ಸ್ಕೋರ್ ಪರಿಶೀಲಿಸಿ (70%+) ಮತ್ತು ಮಾರುಕಟ್ಟೆಯಲ್ಲಿ ಪ್ರಕಟಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ!',
-              ml: 'തയ്യാറെടുപ്പ് സ്കോർ പരിശോധിച്ച് പ്രസിദ്ധീകരിക്കുക!'
+              ml: 'തയ്യാറെടുപ്പ് സ്കോർ പരിശോധിച്ച് പ്രസിദ്ധീകരിക്കുക!',
+              bn: 'আপনার প্রস্তুতি স্কোর যাচাই করুন (৭০%+ হতে হবে)। লাইভ করতে প্রকাশ করুন-এ ট্যাপ করুন!',
+              mr: 'तुमचा तयारी स्कोअर तपासा (७०%+ असावा). तुमचे उत्पादन थेट सुरू करण्यासाठी प्रकाशित करा वर टॅप करा!',
+              ur: 'اپنے تیاری کے اسکور کی تصدیق کریں (70%+ ہونا ضروری ہے)۔ اپنی پروڈکٹ کو لائیو شروع کرنے کے لیے شائع کریں پر ٹیپ کریں!'
             }
           };
         default:
@@ -164,7 +186,10 @@ export default function GuideHandOverlay() {
         ta: step.instruction_ta || step.instruction_en,
         te: step.instruction_te || step.instruction_en,
         kn: step.instruction_kn || step.instruction_en,
-        ml: step.instruction_ml || step.instruction_en
+        ml: step.instruction_ml || step.instruction_en,
+        bn: step.instruction_bn || step.instruction_en,
+        mr: step.instruction_mr || step.instruction_en,
+        ur: step.instruction_ur || step.instruction_en
       }
     };
   }, [isArtisanCreateRoute, currentWorkflow, currentProductStep, currentStepIndex]);
@@ -175,19 +200,25 @@ export default function GuideHandOverlay() {
   const findTargetElement = useCallback((targetId?: string): HTMLElement | null => {
     if (!targetId) return null;
 
-    // 1. Data-help selector
-    const byHelp = document.querySelector(`[data-help="${targetId}"]`) as HTMLElement;
-    if (byHelp) return byHelp;
-
-    // 2. Data-guide-id selector
-    const byGuide = document.querySelector(`[data-guide-id="${targetId}"]`) as HTMLElement;
-    if (byGuide) return byGuide;
-
-    // 3. ID selector
+    // 1. Direct ID selector
     const byId = document.getElementById(targetId);
     if (byId) return byId;
 
+    // 2. Data-help selector
+    const byHelp = document.querySelector(`[data-help="${targetId}"]`) as HTMLElement;
+    if (byHelp) return byHelp;
+
+    // 3. Data-guide-id selector
+    const byGuide = document.querySelector(`[data-guide-id="${targetId}"]`) as HTMLElement;
+    if (byGuide) return byGuide;
+
     // 4. Fuzzy fallback matches
+    if (targetId === 'ai-price-recommendation') {
+      return (document.querySelector('#ai-price-recommendation') ||
+        document.querySelector('[data-guide-id="ai-price-recommendation"]') ||
+        document.querySelector('[data-help="ai-price-recommendation"]') ||
+        document.querySelector('#price')) as HTMLElement;
+    }
     if (targetId === 'add-product') {
       return (document.querySelector('#add-product-button') ||
         document.querySelector('[data-guide-id="add-product-button"]') ||
@@ -319,6 +350,14 @@ export default function GuideHandOverlay() {
     };
   }, [isActive, activeStep, guidanceLevel, location.pathname, currentProductStep, findTargetElement, updatePositions]);
 
+  // Stop speech synthesis on step change or unmount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, [currentProductStep, currentStepIndex, activeStep]);
+
   // Keep positions updated during scrolling and window resizing
   useEffect(() => {
     if (!isActive) return;
@@ -433,8 +472,42 @@ export default function GuideHandOverlay() {
   };
 
   const instructionText =
-    activeStep.instruction[currentLang as keyof typeof activeStep.instruction] ||
+    (activeStep.instruction as any)[currentLang] ||
     activeStep.instruction.en;
+
+  // Speaker / Audio TTS explanation using native Web Speech API in active language
+  const handleSpeak = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(instructionText);
+    const langMap: Record<string, string> = {
+      en: 'en-IN',
+      hi: 'hi-IN',
+      ta: 'ta-IN',
+      te: 'te-IN',
+      kn: 'kn-IN',
+      ml: 'ml-IN',
+      bn: 'bn-IN',
+      mr: 'mr-IN',
+      ur: 'ur-IN'
+    };
+    utterance.lang = langMap[currentLang] || 'en-IN';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const rotationDeg =
     handPos.direction === 'up'
@@ -524,13 +597,29 @@ export default function GuideHandOverlay() {
                 {activeStep.title}
               </span>
             </div>
-            <button
-              onClick={skip}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-              aria-label="Close Guide"
-            >
-              <X size={15} />
-            </button>
+            
+            <div className="flex items-center gap-1">
+              {/* Speaker Icon for Multilingual Voice Explanation */}
+              <button
+                type="button"
+                onClick={handleSpeak}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  isSpeaking ? 'text-amber-600 bg-amber-100 animate-pulse ring-2 ring-amber-400' : 'text-stone-500 hover:text-amber-600 hover:bg-stone-100'
+                }`}
+                aria-label="Listen to explanation"
+                title="Listen in your language"
+              >
+                <Volume2 size={16} />
+              </button>
+
+              <button
+                onClick={skip}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+                aria-label="Close Guide"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
 
           {/* Instruction Text */}

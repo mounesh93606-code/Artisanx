@@ -8,6 +8,7 @@ from images.router import router as images_router
 from voice.router import router as voice_router
 from ai_catalogue.router import router as ai_catalogue_router
 from pricing.router import router as pricing_router
+from pricing.schemas import MLPricingPredictRequest
 from passports.router import router as passports_router
 from enquiries.router import router as enquiries_router
 from facilitator.router import router as facilitator_router
@@ -28,10 +29,11 @@ from fastapi.responses import JSONResponse
 import traceback
 import httpx
 
-# Global patch for httpx to fix Supabase/Gemini timeouts and HTTP/2 disconnects
+# Global patch for httpx to fix Supabase/Gemini/SerpAPI timeouts and SSL proxy disconnects
 _original_client_init = httpx.Client.__init__
 def _new_client_init(self, *args, **kwargs):
     kwargs['http2'] = False
+    kwargs['verify'] = False
     if 'timeout' not in kwargs or kwargs['timeout'] is httpx.USE_CLIENT_DEFAULT:
         kwargs['timeout'] = httpx.Timeout(30.0)
     _original_client_init(self, *args, **kwargs)
@@ -40,6 +42,7 @@ httpx.Client.__init__ = _new_client_init
 _original_async_client_init = httpx.AsyncClient.__init__
 def _new_async_client_init(self, *args, **kwargs):
     kwargs['http2'] = False
+    kwargs['verify'] = False
     if 'timeout' not in kwargs or kwargs['timeout'] is httpx.USE_CLIENT_DEFAULT:
         kwargs['timeout'] = httpx.Timeout(30.0)
     _original_async_client_init(self, *args, **kwargs)
@@ -112,6 +115,21 @@ app.include_router(support_requests_router)
 app.include_router(disputes_router)
 from fastapi.responses import PlainTextResponse
 
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from pricing.ml_service import get_pricing_predictor
+        logger.info("Pre-loading Multimodal ML Dynamic Pricing model...")
+        get_pricing_predictor()
+        logger.info("ML Dynamic Pricing model successfully loaded and ready for inference.")
+    except Exception as e:
+        logger.warning(f"Note: ML Pricing model pre-load deferred to first request: {e}")
+
+@app.post("/api/pricing/predict", tags=["pricing"])
+async def api_pricing_predict_alias(req: MLPricingPredictRequest):
+    from pricing.ml_service import predict_price_recommendation
+    return predict_price_recommendation(req)
+
 @app.get("/")
 def root():
     return {
@@ -131,3 +149,4 @@ def health_check() -> dict:
 @app.head("/ping")
 def ping() -> str:
     return "ok"
+

@@ -5,11 +5,32 @@ interface ProductWizardState {
     currentStep: number;
     setStep: (step: number) => void;
     draftId: string | null;
-    photos: Array<{ id: string, image_url: string, enhanced_url?: string, original_url?: string, is_main: boolean, quality_score?: number, enhanced_quality_score?: number, suggestions?: string[], enhanced_quality?: boolean }>;
+    photos: Array<{ 
+        id: string; 
+        image_url: string; 
+        enhanced_url?: string; 
+        original_url?: string; 
+        is_main: boolean; 
+        quality_score?: number; 
+        enhanced_quality_score?: number; 
+        suggestions?: string[]; 
+        enhanced_quality?: boolean;
+        overall_score_100?: number;
+        quality_breakdown?: Record<string, number>;
+        actionable_feedback?: string[];
+        background_type?: string;
+    }>;
     setPhotos: (photos: any[]) => void;
     addPhoto: (photo: any) => void;
     deletePhoto: (id: string) => Promise<void>;
-    voiceData: { record_id?: string, original_text?: string, translated_text?: string } | null;
+    voiceData: { 
+        record_id?: string; 
+        original_text?: string; 
+        translated_text?: string; 
+        is_valid?: boolean; 
+        validation_error?: string; 
+        detected_language?: string; 
+    } | null;
     setVoiceData: (data: any) => void;
     catalogueData: {
       title: string;
@@ -27,8 +48,32 @@ interface ProductWizardState {
       low_stock_threshold?: number | '';
       moq: number | '';
       lead_time_days: number | '';
+      short_description?: string;
+      full_description?: string;
+      key_highlights?: string[];
+      product_story?: string;
+      craft_type?: string;
+      manufacturing_technique?: string;
+      handmade_status?: string;
+      seo?: { 
+          seo_title: string; 
+          meta_description: string; 
+          keywords: string[]; 
+          search_tags: string[]; 
+      } | null;
+      translations?: Record<string, { 
+          title: string; 
+          short_description: string; 
+          full_description: string; 
+          key_highlights: string[]; 
+      }> | null;
+      quality_validation?: { 
+          passed: boolean; 
+          warnings: string[]; 
+      } | null;
     } | null;
     setCatalogueData: (data: any) => void;
+
     materialsData: Array<{ id: string, name: string, quantity: number, unit: string, cost: number }>;
     setMaterialsData: (materials: any[]) => void;
     pricingData: {
@@ -49,9 +94,23 @@ interface ProductWizardState {
           listings: Array<{title: string, price: number, source: string, url: string}> | null;
           recommended_final_price: number;
       };
+      aiPricing?: {
+          predicted_price: number;
+          recommended_price: number;
+          price_range: { low: number; high: number };
+          cost_floor: number;
+          confidence: string;
+          explanation: string[];
+          model?: string;
+          features_used?: number;
+          status?: string;
+      } | null;
+      isAiLoading?: boolean;
+      aiError?: string | null;
     };
     setPricingData: (data: any) => void;
     fetchMarketData: () => Promise<void>;
+    fetchAiPriceRecommendation: () => Promise<void>;
     saveDraft: () => Promise<void>;
     publishProduct: () => Promise<void>;
     loadProduct: (id: string) => Promise<void>;
@@ -88,9 +147,79 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
     materialsData: [],
     setMaterialsData: (materialsData) => set({ materialsData }),
     pricingData: {
-      laborHours: 0, laborRate: 0, packagingCost: 0, overheadCost: 0, logisticsCost: 0, profitMargin: 20, finalPrice: 0, finalPriceBasis: 'cost_floor'
+      laborHours: 0, 
+      laborRate: 0, 
+      packagingCost: 0, 
+      overheadCost: 0, 
+      logisticsCost: 0, 
+      profitMargin: 20, 
+      finalPrice: 0, 
+      finalPriceBasis: 'cost_floor',
+      aiPricing: null,
+      isAiLoading: false,
+      aiError: null
     },
     setPricingData: (pricingData) => set((state) => ({ pricingData: { ...state.pricingData, ...pricingData } })),
+    fetchAiPriceRecommendation: async () => {
+        const state = get();
+        set((s) => ({
+            pricingData: { ...s.pricingData, isAiLoading: true, aiError: null }
+        }));
+
+        try {
+            // Find main photo or first photo uploaded in Step 1
+            const mainPhoto = state.photos.find(p => p.is_main) || state.photos[0];
+            const imageUrl = mainPhoto?.enhanced_url || mainPhoto?.image_url;
+
+            const payload = {
+                product_id: state.draftId || undefined,
+                title: state.catalogueData?.title || 'Handcrafted Product',
+                product_name: state.catalogueData?.title || 'Handcrafted Product',
+                category: state.catalogueData?.category || '',
+                description: state.catalogueData?.description || state.catalogueData?.short_description || '',
+                craft_type: state.catalogueData?.craft_type || '',
+                materials: state.materialsData.map(m => ({ 
+                    name: m.name, 
+                    quantity: m.quantity, 
+                    unit: m.unit, 
+                    cost: m.cost 
+                })),
+                dimensions: state.catalogueData?.dimensions || '',
+                production_time: state.catalogueData?.estimated_production_time || '',
+                labor_hours: state.pricingData.laborHours || 0,
+                labor_rate: state.pricingData.laborRate || 0,
+                packaging_cost: state.pricingData.packagingCost || 0,
+                overhead_cost: state.pricingData.overheadCost || 0,
+                logistics_cost: state.pricingData.logisticsCost || 0,
+                profit_margin_percent: state.pricingData.profitMargin || 20,
+                image_url: imageUrl || undefined,
+                tags: state.catalogueData?.tags || []
+            };
+
+            const res = await api.post('/pricing/predict', payload, { timeout: 15000 });
+            if (res.data && res.data.success) {
+                set((s) => ({
+                    pricingData: {
+                        ...s.pricingData,
+                        aiPricing: res.data,
+                        isAiLoading: false,
+                        aiError: null
+                    }
+                }));
+            } else {
+                throw new Error("Invalid prediction response");
+            }
+        } catch (error: any) {
+            console.warn("AI Pricing recommendation unavailable:", error);
+            set((s) => ({
+                pricingData: {
+                    ...s.pricingData,
+                    isAiLoading: false,
+                    aiError: "AI pricing temporarily unavailable. You can enter the price manually."
+                }
+            }));
+        }
+    },
     fetchMarketData: async () => {
         const state = get();
         const category = state.catalogueData?.category;
@@ -113,6 +242,8 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
                 profit_margin_percent: state.pricingData.profitMargin,
                 category: category,
                 materials: state.materialsData.map(m => m.name)
+            }, {
+                timeout: 30000
             });
             
             const marketData = {
@@ -130,8 +261,7 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
             }));
             
         } catch (error) {
-            console.error("Failed to fetch market data", error);
-            alert("Unable to load market prices. Please try again.");
+            console.warn("Pricing calculation service unreachable", error);
         }
     },
     saveDraft: async () => {
@@ -141,7 +271,18 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
         description: state.catalogueData?.description || '',
         category: state.catalogueData?.category || '',
         tags: state.catalogueData?.tags || [],
-        materials: { list: state.materialsData.map(m => ({ name: m.name, quantity: m.quantity, unit: m.unit })) },
+        materials: { 
+            list: state.materialsData.map(m => ({ name: m.name, quantity: m.quantity, unit: m.unit })),
+            translations: state.catalogueData?.translations || {},
+            seo: state.catalogueData?.seo || {},
+            short_description: state.catalogueData?.short_description || '',
+            full_description: state.catalogueData?.full_description || '',
+            key_highlights: state.catalogueData?.key_highlights || [],
+            product_story: state.catalogueData?.product_story || '',
+            craft_type: state.catalogueData?.craft_type || '',
+            manufacturing_technique: state.catalogueData?.manufacturing_technique || '',
+            handmade_status: state.catalogueData?.handmade_status || '100% Handcrafted'
+        },
         care_instructions: state.catalogueData?.care_instructions || '',
         price: state.pricingData.finalPrice || 0,
         status: 'draft',
@@ -192,6 +333,7 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
       try {
         const { data } = await api.get(`/products/${id}`);
         const materialsData = data.materials?.list || [];
+        const extraData = data.materials || {};
         
         let pricingData: ProductWizardState['pricingData'] = { laborHours: 0, laborRate: 0, packagingCost: 0, overheadCost: 0, logisticsCost: 0, profitMargin: 20, finalPrice: data.price || 0, finalPriceBasis: 'cost_floor' };
         let fullMaterialsData = materialsData;
@@ -245,7 +387,7 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
             tags: data.tags || [],
             materials: materialsData.map((m: any) => m.name),
             care_instructions: data.care_instructions || '',
-            estimated_production_time: '',
+            estimated_production_time: data.production_time || '',
             dimensions: data.dimensions || '',
             stock_quantity: data.stock_quantity ?? '',
             reserved_stock: data.reserved_stock ?? 0,
@@ -253,7 +395,16 @@ export const useProductStore = create<ProductWizardState>((set, get) => ({
             monthly_capacity: data.monthly_capacity ?? '',
             low_stock_threshold: data.low_stock_threshold ?? 5,
             moq: data.moq ?? '',
-            lead_time_days: data.lead_time_days ?? ''
+            lead_time_days: data.lead_time_days ?? '',
+            short_description: extraData.short_description || '',
+            full_description: extraData.full_description || data.description || '',
+            key_highlights: extraData.key_highlights || [],
+            product_story: extraData.product_story || '',
+            craft_type: extraData.craft_type || '',
+            manufacturing_technique: extraData.manufacturing_technique || '',
+            handmade_status: extraData.handmade_status || '100% Handcrafted',
+            seo: extraData.seo || null,
+            translations: extraData.translations || null
           },
           materialsData: fullMaterialsData,
           pricingData: pricingData,

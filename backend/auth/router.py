@@ -16,7 +16,7 @@ def route_verify_otp(req: schemas.VerifyOTPRequest):
 
 @router.post("/register")
 def route_register(req: schemas.EmailAuthRequest):
-    return service.register_email(req.email, req.password)
+    return service.register_email(req.email, req.password, req.phone)
 
 @router.post("/login")
 def route_login(req: schemas.EmailAuthRequest):

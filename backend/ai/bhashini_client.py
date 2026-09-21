@@ -318,7 +318,28 @@ class BhashiniClient:
     def detect_text_language(self, text: str) -> str:
         """
         TLD (Text Language Detection): Detects which Indic language the text belongs to.
+        Uses fast deterministic Unicode block analysis first, falling back to Bhashini TLD.
         """
+        if not text or not text.strip():
+            return "en"
+            
+        # Count characters in Indic Unicode blocks
+        script_counts = {
+            "ta": sum(1 for c in text if '\u0B80' <= c <= '\u0BFF'), # Tamil
+            "hi": sum(1 for c in text if '\u0900' <= c <= '\u097F'), # Devanagari (Hindi/Marathi)
+            "te": sum(1 for c in text if '\u0C00' <= c <= '\u0C7F'), # Telugu
+            "kn": sum(1 for c in text if '\u0C80' <= c <= '\u0CFF'), # Kannada
+            "ml": sum(1 for c in text if '\u0D00' <= c <= '\u0D7F'), # Malayalam
+            "bn": sum(1 for c in text if '\u0980' <= c <= '\u09FF'), # Bengali
+            "gu": sum(1 for c in text if '\u0A80' <= c <= '\u0AFF'), # Gujarati
+            "ur": sum(1 for c in text if '\u0600' <= c <= '\u06FF'), # Urdu
+        }
+        
+        top_lang = max(script_counts, key=script_counts.get)
+        if script_counts[top_lang] >= 3:
+            return top_lang
+
+        # Fallback to Bhashini API
         payload = {
             "pipelineTasks": [
                 {
@@ -326,16 +347,166 @@ class BhashiniClient:
                 }
             ],
             "inputData": {
-                "input": [{"source": text}]
+                "input": [{"source": text[:200]}]
             }
         }
         headers = self._get_inference_headers()
-        with httpx.Client(timeout=10.0) as client:
-            res = client.post(self.inference_endpoint, json=payload, headers=headers)
-            if res.status_code == 200:
-                out = res.json().get("pipelineResponse", [{}])[0].get("output", [{}])[0]
-                return out.get("langPrediction", [{}])[0].get("langCode", "en")
-            return "en"
+        try:
+            with httpx.Client(timeout=8.0) as client:
+                res = client.post(self.inference_endpoint, json=payload, headers=headers)
+                if res.status_code == 200:
+                    out = res.json().get("pipelineResponse", [{}])[0].get("output", [{}])[0]
+                    detected = out.get("langPrediction", [{}])[0].get("langCode", "")
+                    if detected in SUPPORTED_BHASHINI_LANGUAGES:
+                        return detected
+        except Exception as e:
+            logger.debug(f"Bhashini TLD endpoint skipped: {e}")
+            
+        return "en"
+
+    def translate_catalogue_fields(
+        self, 
+        fields: Dict[str, Any], 
+        source_lang: str = "en", 
+        target_langs: List[str] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Translates structured catalogue fields (title, short_description, full_description, key_highlights)
+        into multiple regional Indian languages using high-performance concurrent batch requests to Bhashini NMT.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        if target_langs is None:
+            target_langs = ["hi", "ta", "te", "kn", "ml", "bn", "mr", "gu"]
+
+        title = fields.get("title", "")
+        short_desc = fields.get("short_description", "") or fields.get("description", "")
+        full_desc = fields.get("full_description", "") or fields.get("description", "")
+        highlights = fields.get("key_highlights", [])
+        highlights_str = "\n".join(f"• {h}" for h in highlights) if highlights else ""
+
+        results: Dict[str, Dict[str, Any]] = {}
+
+        # Default source language entry
+        results[source_lang] = {
+            "title": title,
+            "short_description": short_desc,
+            "full_description": full_desc,
+            "key_highlights": highlights
+        }
+
+        def _translate_single_lang(t_lang: str) -> tuple:
+            if t_lang == source_lang:
+                return t_lang, results[source_lang]
+
+            # Build single batch request with all fields
+            inputs = []
+            inputs.append({"source": title or "Craft"})
+            inputs.append({"source": short_desc or "Handcrafted product"})
+            inputs.append({"source": full_desc or "Handcrafted product by artisans"})
+            if highlights_str:
+                inputs.append({"source": highlights_str})
+
+            payload = {
+                "pipelineTasks": [
+                    {
+                        "taskType": "translation",
+                        "config": {
+                            "language": {
+                                "sourceLanguage": source_lang,
+                                "targetLanguage": t_lang
+                            },
+                            "serviceId": get_nmt_service_id()
+                        }
+                    }
+                ],
+                "inputData": {
+                    "input": inputs
+                }
+            }
+            headers = self._get_inference_headers()
+            try:
+                with httpx.Client(timeout=8.0) as client:
+                    res = client.post(self.inference_endpoint, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        outputs = res.json().get("pipelineResponse", [{}])[0].get("output", [])
+                        t_title = outputs[0].get("target", title) if len(outputs) > 0 else title
+                        t_short = outputs[1].get("target", short_desc) if len(outputs) > 1 else short_desc
+                        t_full = outputs[2].get("target", full_desc) if len(outputs) > 2 else full_desc
+                        
+                        t_high = highlights
+                        if len(outputs) > 3 and highlights_str:
+                            t_high_text = outputs[3].get("target", "")
+                            t_high = [line.lstrip("•*- ").strip() for line in t_high_text.split("\n") if line.strip()] or highlights
+
+                        return t_lang, {
+                            "title": t_title,
+                            "short_description": t_short,
+                            "full_description": t_full,
+                            "key_highlights": t_high
+                        }
+            except Exception as e:
+                logger.warning(f"Batch Bhashini translation to {t_lang} failed: {e}")
+
+            # Fallback to source fields
+            return t_lang, {
+                "title": title,
+                "short_description": short_desc,
+                "full_description": full_desc,
+                "key_highlights": highlights
+            }
+
+        # Run concurrent batch translations across all languages in parallel
+        with ThreadPoolExecutor(max_workers=min(len(target_langs), 8)) as executor:
+            lang_results = list(executor.map(_translate_single_lang, target_langs))
+
+        for t_lang, lang_dict in lang_results:
+            results[t_lang] = lang_dict
+
+        return results
+
+    def validate_translation_quality(
+        self, 
+        source_text: str, 
+        translated_text: str, 
+        key_entities: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Validates translation quality:
+        - Non-empty check
+        - Length ratio check
+        - Preservation of numbers / measurements (e.g. '10 days', '2.5')
+        """
+        if not translated_text or not translated_text.strip():
+            return {"passed": False, "reason": "Empty translation received"}
+
+        import re
+        # Check numbers preservation
+        source_numbers = set(re.findall(r'\b\d+(?:\.\d+)?\b', source_text))
+        trans_numbers = set(re.findall(r'\b\d+(?:\.\d+)?\b', translated_text))
+        
+        # Missing numbers check (if source had numbers)
+        missing_numbers = source_numbers - trans_numbers
+        
+        # Length check (translation shouldn't be abnormally tiny compared to source)
+        src_len = len(source_text.strip())
+        trans_len = len(translated_text.strip())
+        length_ratio = trans_len / max(src_len, 1)
+
+        is_valid = True
+        warnings = []
+        if length_ratio < 0.25 and src_len > 20:
+            is_valid = False
+            warnings.append("Translation appears truncated or incomplete")
+            
+        if missing_numbers:
+            warnings.append(f"Numbers missing in translation: {', '.join(missing_numbers)}")
+
+        return {
+            "passed": is_valid,
+            "length_ratio": round(length_ratio, 2),
+            "warnings": warnings
+        }
 
 # Global client singleton
 bhashini_client = BhashiniClient()

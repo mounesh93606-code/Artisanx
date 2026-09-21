@@ -5,17 +5,23 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-# Priority order of models: lightweight, high-availability, followed by larger models
+# Priority order of models: lightweight, ultra-fast, high-availability first, followed by larger models
 FALLBACK_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
     "gemini-3.1-flash-lite",
-    "gemini-flash-lite-latest"
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash"
 ]
 
 def get_gemini_client():
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+    return genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options=types.HttpOptions(
+            timeout=12000,
+            retry_options=types.HttpRetryOptions(attempts=1)
+        )
+    )
 
 def generate_content(prompt: str, mime_type: str = "application/json") -> str:
     client = get_gemini_client()

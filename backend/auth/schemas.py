@@ -13,6 +13,7 @@ class SetRoleRequest(BaseModel):
 class EmailAuthRequest(BaseModel):
     email: str
     password: str
+    phone: str | None = None
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str

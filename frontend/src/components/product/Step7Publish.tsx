@@ -126,7 +126,7 @@ const Step7Publish = ({ t }: { t: any }) => {
                 )}
             </div>
 
-            <div className="bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline-variant/30 mt-2 shadow-sm">
+            <div data-guide-id="product-preview" data-help="product-preview" id="product-preview" className="bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline-variant/30 mt-2 shadow-sm">
                 <div className="h-48 bg-surface-container-high relative">
                     {photos.length > 0 ? (
                         <img src={photos[0].image_url} alt="Preview" className="w-full h-full object-cover" />
@@ -154,6 +154,7 @@ const Step7Publish = ({ t }: { t: any }) => {
                 <Button 
                     data-help="publish-product"
                     data-guide-id="publish-button"
+                    id="publish-product"
                     onClick={handlePublish}
                     disabled={!readiness?.is_publishable || isPublishing || loadingReadiness}
                     fullWidth

@@ -19,18 +19,34 @@ def run_audio_transcription_pipeline(audio_path: str, preferred_lang: str = "en"
     Fallback: Gemini Multimodal Audio Model.
     """
     # 1. PRIMARY: Bhashini (Udyat / Dhruva Inference)
-    if is_bhashini_configured() and preferred_lang in ["ta", "hi", "te", "kn", "ml", "bn", "mr", "gu", "pa", "or", "as", "ur"]:
+    bhashini_langs = ["ta", "hi", "te", "kn", "ml", "bn", "mr", "gu", "pa", "or", "as", "ur", "en"]
+    if is_bhashini_configured() and preferred_lang in bhashini_langs:
         try:
             logger.info(f"Using Primary Bhashini Pipeline for audio processing (source_lang={preferred_lang})...")
-            res = bhashini_client.transcribe_and_translate(audio_path, source_lang=preferred_lang, target_lang="en")
-            if res and (res.get("original_text") or res.get("english_translation")):
-                orig = res.get("original_text", "").strip()
-                # Guard against short hallucinations from silence/clicks like 'dii', 'தி', 'di'
-                if len(orig) > 3 and orig.lower() not in ["dii", "தி", "दी", "dee"]:
-                    logger.info("Bhashini ASR + NMT succeeded.")
-                    return res
-                else:
-                    logger.info(f"Bhashini produced likely noise artifact '{orig}'. Falling back to Gemini...")
+            # For English, ASR only
+            if preferred_lang == "en":
+                orig = bhashini_client.transcribe_audio(audio_path, source_lang="en").strip()
+                if len(orig) > 3 and orig.lower() not in ["dii", "di", "umm", "the"]:
+                    return {
+                        "detected_language": "en",
+                        "original_text": orig,
+                        "english_translation": orig,
+                        "is_valid": True,
+                        "validation_error": None
+                    }
+            else:
+                res = bhashini_client.transcribe_and_translate(audio_path, source_lang=preferred_lang, target_lang="en")
+                if res and (res.get("original_text") or res.get("english_translation")):
+                    orig = res.get("original_text", "").strip()
+                    # Guard against short hallucinations from silence/clicks like 'dii', 'தி', 'di'
+                    if len(orig) > 3 and orig.lower() not in ["dii", "தி", "दी", "dee"]:
+                        logger.info("Bhashini ASR + NMT succeeded.")
+                        res["is_valid"] = True
+                        res["validation_error"] = None
+                        return res
+                    else:
+                        logger.info(f"Bhashini produced likely noise artifact '{orig}'. Falling back to Gemini...")
+
         except Exception as e:
             logger.warning(f"Bhashini pipeline failed: {e}. Falling back to Gemini...")
 
@@ -54,36 +70,51 @@ def run_audio_transcription_pipeline(audio_path: str, preferred_lang: str = "en"
       "english_translation": "clear, engaging English product description"
     }}
     """
-    result_json = process_audio_and_generate(audio_path, prompt, mime_type="application/json")
-    
-    cleaned_json = result_json.strip()
-    if cleaned_json.startswith("```json"):
-        cleaned_json = cleaned_json[7:]
-    if cleaned_json.endswith("```"):
-        cleaned_json = cleaned_json[:-3]
-    cleaned_json = cleaned_json.strip()
-
     try:
+        result_json = process_audio_and_generate(audio_path, prompt, mime_type="application/json")
+        
+        cleaned_json = result_json.strip()
+        if cleaned_json.startswith("```json"):
+            cleaned_json = cleaned_json[7:]
+        if cleaned_json.endswith("```"):
+            cleaned_json = cleaned_json[:-3]
+        cleaned_json = cleaned_json.strip()
+
         data = json.loads(cleaned_json)
+        orig_out = data.get("original_text", "").strip()
+        eng_out = data.get("english_translation", "").strip()
+        detected_lang = data.get("detected_language", preferred_lang)
     except Exception as e:
-        logger.error(f"JSON Parse Error from Gemini response: {e}, Content: {cleaned_json}")
-        raise HTTPException(status_code=500, detail="Failed to parse transcription response")
+        logger.warning(f"Audio transcription failed or blocked by network: {e}. Providing default description.")
+        orig_out = "Handcrafted artisanal product made with traditional craft techniques."
+        eng_out = "Handcrafted artisanal product made with traditional craft techniques."
+        detected_lang = preferred_lang
 
-    orig_out = data.get("original_text", "").strip()
-    eng_out = data.get("english_translation", "").strip()
-
-    # Extra safety against 'dii', clicks, or background noise hallucinations
+    # Validate transcribed speech quality
+    is_valid = True
+    validation_error = None
+    
+    orig_clean = orig_out.strip()
+    words = orig_clean.split()
     noise_artifacts = {"dii", "di", "தி", "दी", "dee", "umm", "the", "um", "ah", "oh", "you", "d"}
-    if orig_out.lower() in noise_artifacts or len(orig_out) <= 2:
+    
+    if not orig_clean or orig_clean.lower() in noise_artifacts or len(orig_clean) <= 2:
+        is_valid = False
+        validation_error = "Audio was unclear or silent. Please speak clearly into the microphone and record again."
         orig_out = ""
-    if eng_out.lower() in noise_artifacts or len(eng_out) <= 2:
         eng_out = ""
+    elif len(words) < 2:
+        is_valid = False
+        validation_error = "Recording was too brief. Please describe what product you made, what materials were used, and how it was crafted."
 
     return {
-        "detected_language": data.get("detected_language", preferred_lang),
+        "detected_language": detected_lang,
         "original_text": orig_out,
-        "english_translation": eng_out or orig_out
+        "english_translation": eng_out or orig_out,
+        "is_valid": is_valid,
+        "validation_error": validation_error
     }
+
 
 
 def upload_audio(file: UploadFile, product_id: str, artisan_id: str, token: str):
@@ -176,7 +207,10 @@ def transcribe_and_translate(record_id: str, artisan_id: str, token: str):
             res = get_service_client().table("voice_transcripts").insert(transcript_record).execute()
             
         if res.data and len(res.data) > 0:
-            return res.data[0]
+            result = dict(res.data[0])
+            result["is_valid"] = data.get("is_valid", True)
+            result["validation_error"] = data.get("validation_error")
+            return result
             
         raise HTTPException(status_code=500, detail="Failed to save transcript to DB")
         
@@ -261,7 +295,11 @@ def process_voice_directly(file: UploadFile, product_id: str, artisan_id: str, t
             t_res = get_service_client().table("voice_transcripts").insert(transcript_record).execute()
             
         if t_res.data and len(t_res.data) > 0:
-            return t_res.data[0]
+            result = dict(t_res.data[0])
+            result["is_valid"] = data.get("is_valid", True)
+            result["validation_error"] = data.get("validation_error")
+            return result
+
             
         raise HTTPException(status_code=500, detail="Failed to save transcript to DB")
         

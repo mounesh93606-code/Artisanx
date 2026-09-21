@@ -55,3 +55,14 @@ def calculate_price(input_data: PricingInput, market_data: Optional[MarketPriceR
         output.recommended_final_price = max(output.suggested_price, market_data.price_median)
         
     return output
+
+async def calculate_pricing_with_market_intelligence(req: PricingInput) -> PricingOutput:
+    market_data = None
+    if req.category and req.materials:
+        try:
+            from market_intelligence.service import get_or_refresh_market_price
+            market_data = await get_or_refresh_market_price(req.category, req.materials)
+        except Exception:
+            pass
+    return calculate_price(req, market_data)
+

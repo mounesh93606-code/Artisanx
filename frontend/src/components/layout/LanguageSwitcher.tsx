@@ -27,7 +27,6 @@ export function LanguageSwitcher() {
         { code: 'hi', label: 'हिन्दी' },
         { code: 'te', label: 'తెలుగు' },
         { code: 'kn', label: 'ಕನ್ನಡ' },
-        { code: 'ml', label: 'മലയാളം' },
         { code: 'bn', label: 'বাংলা' },
         { code: 'mr', label: 'मराठी' },
         { code: 'ur', label: 'اردو' }

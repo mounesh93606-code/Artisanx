@@ -9,3 +9,6 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+google-services.json
+*.keystore
+*.jks

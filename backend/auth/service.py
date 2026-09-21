@@ -21,10 +21,13 @@ def verify_otp(phone: str, token: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-def register_email(email: str, password: str):
+def register_email(email: str, password: str, phone: str | None = None):
     try:
         client = get_supabase_client()
-        response = client.auth.sign_up({"email": email, "password": password})
+        signup_data = {"email": email, "password": password}
+        if phone:
+            signup_data["phone"] = phone
+        response = client.auth.sign_up(signup_data)
         if not response.user:
             raise HTTPException(status_code=400, detail="Registration failed")
         

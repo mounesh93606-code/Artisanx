@@ -6,7 +6,6 @@ import ta from './ta.json';
 import hi from './hi.json';
 import te from './te.json';
 import kn from './kn.json';
-import ml from './ml.json';
 import bn from './bn.json';
 import mr from './mr.json';
 import ur from './ur.json';
@@ -24,7 +23,6 @@ i18n.use(initReactI18next).init({
     hi: { translation: hi },
     te: { translation: te },
     kn: { translation: kn },
-    ml: { translation: ml },
     bn: { translation: bn },
     mr: { translation: mr },
     ur: { translation: ur }
