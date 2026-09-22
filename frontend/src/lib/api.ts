@@ -1,14 +1,45 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+export const CLOUD_API_URL = 'https://artisanx.onrender.com';
+
+const isPrivateIp = (host: string): boolean => {
+    return (
+        /^192\.168\./.test(host) ||
+        /^10\./.test(host) ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+    );
+};
+
 export const getApiUrl = (): string => {
     if (typeof window !== 'undefined') {
         const customUrl = localStorage.getItem('artisanx_api_url');
-        if (customUrl) return customUrl;
+        const isHttps = window.location.protocol === 'https:';
+
+        // Check stored custom URL: prevent mixed-content blocking on HTTPS web browsers
+        if (customUrl) {
+            const isNative = typeof window !== 'undefined' && (window as any)?.Capacitor?.isNativePlatform?.();
+            if (isHttps && customUrl.startsWith('http://') && !isNative) {
+                localStorage.removeItem('artisanx_api_url');
+            } else {
+                return customUrl;
+            }
+        }
+
+        const hostname = window.location.hostname || '';
+
+        // If hosted on Vercel, Render, or any public domain -> connect to live Render backend
+        if (
+            hostname.includes('vercel.app') ||
+            hostname.includes('onrender.com') ||
+            (hostname && !['localhost', '127.0.0.1'].includes(hostname) && !isPrivateIp(hostname))
+        ) {
+            return CLOUD_API_URL;
+        }
 
         // If loaded from a LAN/Wi-Fi IP in mobile browser (e.g. 192.168.x.x)
-        if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            return `${window.location.protocol}//${window.location.hostname}:8000`;
+        if (isPrivateIp(hostname)) {
+            return `${window.location.protocol}//${hostname}:8000`;
         }
     }
     if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;

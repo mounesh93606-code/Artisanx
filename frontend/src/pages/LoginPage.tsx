@@ -444,7 +444,18 @@ const LoginPage: React.FC = () => {
             <span className="material-symbols-outlined text-[16px] text-tertiary">lock</span>
             Secure & Government Compliant
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap justify-center">
+            <button
+              type="button"
+              onClick={() => handleSwitchServer('https://artisanx.onrender.com')}
+              className={`px-3 py-1 text-[11px] font-bold rounded-full transition-all border ${
+                currentServerUrl.includes('onrender.com')
+                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  : 'bg-surface-container-low text-on-surface-variant border-outline-variant/30 hover:bg-surface-container'
+              }`}
+            >
+              Cloud: Render
+            </button>
             <button
               type="button"
               onClick={() => handleSwitchServer('http://localhost:8000')}
