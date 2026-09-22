@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Clock, XCircle, ArrowRight, FileText, ShoppingBag, RefreshCw, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, ArrowRight, FileText, ShoppingBag, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
 import InvoiceModal from '../../components/buyer/InvoiceModal';
@@ -10,7 +10,6 @@ export default function PaymentStatusPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const orderId = searchParams.get('order_id') || searchParams.get('cf_order_id') || '';
-    const queryProductId = searchParams.get('product_id') || '';
 
     const [loading, setLoading] = useState(true);
     const [statusData, setStatusData] = useState<any>(null);
@@ -22,12 +21,6 @@ export default function PaymentStatusPage() {
     const [pollCount, setPollCount] = useState(0);
     const maxPolls = 8;
     const pollTimeoutRef = useRef<any>(null);
-
-    // Auto-redirect countdown state
-    const [countdown, setCountdown] = useState(5);
-    const [autoRedirectCancelled, setAutoRedirectCancelled] = useState(false);
-
-    const productId = queryProductId || statusData?.product_id || '';
 
     const checkStatus = async (isRetry = false) => {
         if (!orderId) {
@@ -104,22 +97,6 @@ export default function PaymentStatusPage() {
     const isPaid = statusData?.payment_status === 'paid';
     const isPending = statusData?.payment_status === 'payment_pending' || statusData?.payment_status === 'payment_initiated';
 
-    // Countdown auto-redirect to product page once paid
-    useEffect(() => {
-        if (!isPaid || !productId || autoRedirectCancelled) return;
-
-        if (countdown <= 0) {
-            navigate(`/product/${productId}`);
-            return;
-        }
-
-        const timer = setTimeout(() => {
-            setCountdown(prev => prev - 1);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, [isPaid, productId, countdown, autoRedirectCancelled, navigate]);
-
     return (
         <div className="w-full min-h-screen bg-surface-container-lowest p-4 sm:p-6 flex flex-col justify-center items-center text-center">
             {loading ? (
@@ -174,21 +151,6 @@ export default function PaymentStatusPage() {
                         </p>
                     </div>
 
-                    {/* Auto-redirect countdown banner when productId is present */}
-                    {productId && !autoRedirectCancelled && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 flex items-center justify-between">
-                            <span className="font-medium">
-                                Returning to product page in <b>{countdown}s</b>...
-                            </span>
-                            <button
-                                onClick={() => setAutoRedirectCancelled(true)}
-                                className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold rounded-lg transition-colors text-[11px]"
-                            >
-                                Stay Here
-                            </button>
-                        </div>
-                    )}
-
                     {/* Verified Order Receipt Card */}
                     <div className="bg-surface border border-outline-variant rounded-2xl p-5 text-left space-y-3 shadow-sm">
                         <div className="flex justify-between items-center text-xs sm:text-sm border-b border-stone-100 pb-2.5">
@@ -213,19 +175,9 @@ export default function PaymentStatusPage() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-2.5 pt-1">
-                        {/* Primary Button: Return to Product Page if productId exists */}
-                        {productId ? (
-                            <button
-                                onClick={() => navigate(`/product/${productId}`)}
-                                className="w-full py-3.5 bg-primary text-on-primary font-bold rounded-full shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-transform active:scale-95"
-                            >
-                                <ArrowLeft className="w-4 h-4" /> Return to Product Page
-                            </button>
-                        ) : null}
-
                         <button
                             onClick={() => navigate(statusData.order_id ? `/buyer/orders/${statusData.order_id}` : '/buyer/orders')}
-                            className={`w-full py-3.5 ${productId ? 'bg-stone-100 text-stone-800 hover:bg-stone-200' : 'bg-primary text-on-primary hover:bg-primary/90 shadow-lg'} font-bold rounded-full flex items-center justify-center gap-2 transition-transform active:scale-95`}
+                            className="w-full py-3.5 bg-primary text-on-primary hover:bg-primary/90 shadow-lg font-bold rounded-full flex items-center justify-center gap-2 transition-transform active:scale-95"
                         >
                             {t('payment.view_order', 'View Order Details')} <ArrowRight className="w-4 h-4" />
                         </button>
@@ -239,7 +191,7 @@ export default function PaymentStatusPage() {
 
                         <button
                             onClick={() => navigate('/buyer/catalogue')}
-                            className="w-full py-2 text-stone-500 font-bold hover:text-stone-800 transition-colors text-xs"
+                            className="w-full py-2.5 text-stone-500 font-bold hover:text-stone-800 transition-colors text-xs"
                         >
                             <ShoppingBag className="w-3.5 h-3.5 inline mr-1" /> Continue Marketplace Browsing
                         </button>

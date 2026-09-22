@@ -79,10 +79,9 @@ export default function CheckoutPage() {
             }));
 
             const isNative = Capacitor.isNativePlatform();
-            const firstProductId = checkoutItems[0]?.productId || '';
             const returnUrl = isNative
-                ? `artisanx://payment/status?order_id={order_id}&product_id=${firstProductId}`
-                : `${window.location.origin}/buyer/payment/status?order_id={order_id}&product_id=${firstProductId}`;
+                ? `artisanx://payment/status?order_id={order_id}`
+                : `${window.location.origin}/buyer/payment/status?order_id={order_id}`;
 
             // Call Cashfree order creation endpoint
             const res = await api.post('/payments/cashfree/create-order', {
