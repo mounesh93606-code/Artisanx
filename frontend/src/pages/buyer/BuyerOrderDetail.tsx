@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Star, X, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Star, X, RefreshCcw, ShieldAlert, FileText } from 'lucide-react';
 import axios from 'axios';
+import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import MessagingUI from '../../components/buyer/MessagingUI';
 import ReviewModal from '../../components/buyer/ReviewModal';
+import InvoiceModal from '../../components/buyer/InvoiceModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -36,6 +38,40 @@ export default function BuyerOrderDetail() {
     const [showDisputeModal, setShowDisputeModal] = useState(false);
     const [disputeReason, setDisputeReason] = useState('quality_issue');
     const [disputeExplanation, setDisputeExplanation] = useState('');
+
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [invoiceData, setInvoiceData] = useState<any>(null);
+
+    const handleViewInvoice = async () => {
+        try {
+            const res = await api.get(`/payments/invoice/${id}`);
+            setInvoiceData(res.data);
+        } catch (e) {
+            const snapshot = order?.product_snapshot || {};
+            const invMeta = snapshot.invoice?.invoice_data;
+            if (invMeta) {
+                setInvoiceData(invMeta);
+            } else {
+                setInvoiceData({
+                    invoice_number: `INV-${order?.display_id || id}`,
+                    order_id: order?.id,
+                    display_id: order?.display_id,
+                    product_title: snapshot.title,
+                    quantity: order?.quantity,
+                    unit_price: order?.unit_price,
+                    total: order?.total_order_value,
+                    buyer_name: 'Buyer',
+                    artisan_name: order?.artisan?.display_name || 'Artisan',
+                    payment_method: 'UPI',
+                    payment_status: 'PAID',
+                    gateway_payment_id: snapshot.payment?.gateway_payment_id,
+                    created_at: order?.created_at,
+                    delivery_address: snapshot.delivery_address
+                });
+            }
+        }
+        setShowInvoiceModal(true);
+    };
 
     useEffect(() => {
         fetchOrder();
@@ -192,7 +228,12 @@ export default function BuyerOrderDetail() {
                             <div><span className="text-stone-500">Unit Price:</span> <br/><span className="font-bold">₹{order.unit_price}</span></div>
                             <div><span className="text-stone-500">Quantity:</span> <br/><span className="font-bold">{order.quantity}</span></div>
                             <div><span className="text-stone-500">Total Amount:</span> <br/><span className="font-bold text-lg text-primary">₹{order.total_order_value}</span></div>
-                            <div><span className="text-stone-500">Expected Dispatch:</span> <br/><span className="font-bold">{order.expected_dispatch_date ? new Date(order.expected_dispatch_date).toLocaleDateString() : 'TBD'}</span></div>
+                            <div>
+                                <span className="text-stone-500">Payment:</span> <br/>
+                                <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded text-[11px] font-black bg-green-100 text-green-800 uppercase">
+                                    UPI — PAID
+                                </span>
+                            </div>
                         </div>
 
                         {order.customization_details && (
@@ -226,10 +267,10 @@ export default function BuyerOrderDetail() {
                         )}
                         
                         <button 
-                            className="w-full py-3 border border-stone-200 text-stone-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors"
-                            onClick={() => alert("Invoice / Summary coming later")}
+                            className="w-full py-3 border border-stone-200 text-stone-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors shadow-sm"
+                            onClick={handleViewInvoice}
                         >
-                            Download Invoice
+                            <FileText className="w-4 h-4 text-primary" /> View / Download Invoice
                         </button>
                         
                         {canCancel && (
@@ -357,6 +398,12 @@ export default function BuyerOrderDetail() {
                     </div>
                 </div>
             )}
+            {/* Invoice Modal */}
+            <InvoiceModal
+                isOpen={showInvoiceModal}
+                onClose={() => setShowInvoiceModal(false)}
+                invoice={invoiceData}
+            />
         </div>
     );
 }

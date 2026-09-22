@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { ArrowLeft, Package, Settings, Truck, Navigation, XCircle, CheckCircle, AlertTriangle, MessageCircle, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Package, Settings, Truck, Navigation, XCircle, CheckCircle, AlertTriangle, MessageCircle, ShieldAlert, FileText } from 'lucide-react';
 import { useOrderStore } from '../../stores/orderStore';
 import api from '../../lib/api';
+import InvoiceModal from '../../components/buyer/InvoiceModal';
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,38 @@ export default function OrderDetail() {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState('quality_issue');
   const [disputeExplanation, setDisputeExplanation] = useState('');
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+
+  const handleViewInvoice = async () => {
+    try {
+      const res = await api.get(`/payments/invoice/${id}`);
+      setInvoiceData(res.data);
+    } catch (e) {
+      const snapshot = currentOrder?.product_snapshot || {};
+      const invMeta = snapshot.invoice?.invoice_data;
+      if (invMeta) {
+        setInvoiceData(invMeta);
+      } else {
+        setInvoiceData({
+          invoice_number: `INV-${currentOrder?.display_id || id}`,
+          order_id: currentOrder?.id,
+          display_id: currentOrder?.display_id,
+          product_title: snapshot.title,
+          quantity: currentOrder?.quantity,
+          unit_price: currentOrder?.unit_price,
+          total: currentOrder?.total_order_value,
+          buyer_name: currentOrder?.buyer?.display_name || 'Buyer',
+          artisan_name: 'Artisan',
+          payment_method: 'UPI',
+          payment_status: 'PAID',
+          created_at: currentOrder?.created_at,
+          delivery_address: snapshot.delivery_address
+        });
+      }
+    }
+    setShowInvoiceModal(true);
+  };
 
   const handleMessageBuyer = async () => {
     if (!currentOrder) return;
@@ -207,7 +240,19 @@ export default function OrderDetail() {
               <span>Total Value</span>
               <span>₹{o.total_order_value.toLocaleString()}</span>
             </div>
+            <div className="flex justify-between items-center pt-2 border-t border-primary/20 text-xs">
+              <span className="font-semibold">Payment Status</span>
+              <span className="px-2 py-0.5 rounded font-black bg-green-100 text-green-800 uppercase">
+                UPI — PAID
+              </span>
+            </div>
           </div>
+          <button
+            onClick={handleViewInvoice}
+            className="w-full mt-3 py-2.5 bg-surface text-stone-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-outline-variant hover:bg-stone-50 transition-colors shadow-sm"
+          >
+            <FileText className="w-4 h-4 text-primary" /> View Order Invoice
+          </button>
         </div>
 
         {/* Timeline from History */}
@@ -370,6 +415,12 @@ export default function OrderDetail() {
           </div>
         )}
 
+        {/* Invoice Modal */}
+        <InvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          invoice={invoiceData}
+        />
       </div>
     </div>
   );

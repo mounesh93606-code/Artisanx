@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../../stores/cartStore';
 
@@ -88,9 +88,13 @@ export default function CartPage() {
 
                                         <p className="text-xs text-stone-500 mt-0.5">By {item.artisanName}</p>
 
-                                        {item.enquiryConfirmed && (
-                                            <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-tertiary bg-tertiary-fixed/30 px-2 py-0.5 rounded-full">
-                                                <ShieldCheck className="w-3 h-3" /> {t('cart.enquiry_confirmed')}
+                                        {item.enquiryConfirmed ? (
+                                            <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                                                <ShieldCheck className="w-3 h-3 text-green-700" /> {t('cart.enquiry_confirmed', { defaultValue: 'Artisan Confirmed' })}
+                                            </div>
+                                        ) : (
+                                            <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                                                <Clock className="w-3 h-3 text-amber-700" /> Awaiting Artisan Confirmation
                                             </div>
                                         )}
 
@@ -155,21 +159,30 @@ export default function CartPage() {
             )}
 
             {/* Sticky Checkout Bar */}
-            {items.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto p-4 bg-surface/95 backdrop-blur-md border-t border-outline-variant flex items-center justify-between gap-4 z-40 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-                    <div>
-                        <div className="text-xs text-stone-500">{t('cart.total_payable')}</div>
-                        <div className="text-xl font-black text-primary">₹{total.toLocaleString()}</div>
+            {items.length > 0 && (() => {
+                const hasUnconfirmed = items.some(i => !i.enquiryConfirmed);
+                return (
+                    <div className="fixed bottom-0 left-0 right-0 mobile-shell-width mx-auto p-4 bg-surface/95 backdrop-blur-md border-t border-outline-variant flex items-center justify-between gap-4 z-40 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+                        <div>
+                            <div className="text-xs text-stone-500">{t('cart.total_payable')}</div>
+                            <div className="text-xl font-black text-primary">₹{total.toLocaleString()}</div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <button 
+                                data-help="checkout-btn"
+                                disabled={hasUnconfirmed}
+                                onClick={() => navigate('/buyer/checkout')}
+                                className="min-w-[180px] min-h-[48px] px-6 py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {hasUnconfirmed ? 'Confirmation Needed' : t('cart.checkout')} <ArrowRight className="w-4 h-4" />
+                            </button>
+                            {hasUnconfirmed && (
+                                <span className="text-[10px] text-amber-700 font-bold mt-1">Artisan confirmation required</span>
+                            )}
+                        </div>
                     </div>
-                    <button 
-                        data-help="checkout-btn"
-                        onClick={() => navigate('/buyer/checkout')}
-                        className="flex-1 max-w-[220px] min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                    >
-                        {t('cart.checkout')} <ArrowRight className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }

@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     BHASHINI_CONFIG_ENDPOINT: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
     BHASHINI_PIPELINE_ID: str = ""
 
+    # Cashfree Payment Gateway Settings
+    CASHFREE_ENV: str = "SANDBOX"  # 'SANDBOX' or 'PRODUCTION'
+    CASHFREE_APP_ID: str = ""
+    CASHFREE_SECRET_KEY: str = ""
+    CASHFREE_API_VERSION: str = "2023-08-01"
+    CASHFREE_RETURN_URL: str = ""
+    CASHFREE_NOTIFY_URL: str = ""
+    BACKEND_URL: str = "http://localhost:8000"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

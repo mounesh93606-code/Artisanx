@@ -135,9 +135,14 @@ export default function BuyerOrders() {
                                 
                                 <div className="grid grid-cols-2 gap-2 text-sm text-stone-600 mb-4 bg-stone-50 p-3 rounded-xl border border-stone-100">
                                     <div><span className="text-stone-400 text-xs block">{t('orders.total', { defaultValue: 'Total Amount' })}</span><span className="font-bold text-stone-800">₹{order.total_order_value}</span></div>
-                                    <div><span className="text-stone-400 text-xs block">{t('cart.quantity', { defaultValue: 'Quantity' })}</span><span className="font-bold text-stone-800">{order.quantity} {t('cart.items', { defaultValue: 'units' })}</span></div>
+                                    <div>
+                                        <span className="text-stone-400 text-xs block">Payment</span>
+                                        <span className="inline-block mt-0.5 text-[10px] font-black px-2 py-0.5 rounded bg-green-100 text-green-800 uppercase">
+                                            UPI — PAID
+                                        </span>
+                                    </div>
                                     <div><span className="text-stone-400 text-xs block">{t('orders.placed_on', { defaultValue: 'Order Date' })}</span><span className="font-bold text-stone-800">{new Date(order.created_at).toLocaleDateString()}</span></div>
-                                    <div><span className="text-stone-400 text-xs block">{t('orders.tracking', { defaultValue: 'Expected Dispatch' })}</span><span className="font-bold text-stone-800">{order.expected_dispatch_date ? new Date(order.expected_dispatch_date).toLocaleDateString() : 'TBD'}</span></div>
+                                    <div><span className="text-stone-400 text-xs block">{t('cart.quantity', { defaultValue: 'Quantity' })}</span><span className="font-bold text-stone-800">{order.quantity} {t('cart.items', { defaultValue: 'units' })}</span></div>
                                 </div>
 
                                 <div className="pt-3 border-t border-stone-100 flex gap-2">

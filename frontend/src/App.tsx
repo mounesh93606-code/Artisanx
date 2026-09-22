@@ -39,6 +39,7 @@ import BuyerQuotationDetail from './pages/buyer/BuyerQuotationDetail';
 import BuyerOrderDetail from './pages/buyer/BuyerOrderDetail';
 import CartPage from './pages/buyer/CartPage';
 import CheckoutPage from './pages/buyer/CheckoutPage';
+import PaymentStatusPage from './pages/buyer/PaymentStatusPage';
 import FacilitatorHome from './pages/facilitator/FacilitatorHome';
 import FacilitatorArtisanProfile from './pages/facilitator/FacilitatorArtisanProfile';
 import SupportRequestsList from './pages/facilitator/SupportRequestsList';
@@ -165,6 +166,7 @@ function App() {
           <Route path="orders/:id" element={<BuyerOrderDetail />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="payment/status" element={<PaymentStatusPage />} />
           <Route path="profile" element={<BuyerProfile />} />
         </Route>
 

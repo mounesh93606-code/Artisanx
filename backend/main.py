@@ -24,6 +24,7 @@ from dashboard.router import router as dashboard_router
 from buyer.router import router as buyer_router
 from support_requests.router import router as support_requests_router
 from disputes.router import router as disputes_router
+from payments.router import router as payments_router
 app = FastAPI(title="ArtisanX API")
 from fastapi.responses import JSONResponse
 import traceback
@@ -113,6 +114,8 @@ app.include_router(reviews_router)
 app.include_router(buyer_router)
 app.include_router(support_requests_router)
 app.include_router(disputes_router)
+app.include_router(payments_router)
+app.include_router(payments_router, prefix="/api")
 from fastapi.responses import PlainTextResponse
 
 @app.on_event("startup")

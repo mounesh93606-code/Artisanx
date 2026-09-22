@@ -479,33 +479,13 @@ export default function BuyerProductPage() {
                         <Mail className="w-4 h-4" /> {t('buyer.send_enquiry', { defaultValue: 'Send New Enquiry' })}
                     </button>
                 ) : (
-                    <>
-                        <button 
-                            data-help="enquiry"
-                            onClick={handleEnquiry} 
-                            className="flex-1 min-h-[48px] py-3 bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant rounded-full font-bold shadow-sm flex items-center justify-center gap-1.5 text-xs sm:text-sm transition-all active:scale-[0.98]"
-                        >
-                            <Mail className="w-4 h-4 text-primary" /> {t('buyer.send_enquiry', { defaultValue: 'Enquiry' })}
-                        </button>
-                        {!product.is_made_to_order && (product.stock_quantity === null || product.stock_quantity > 0) && (
-                            <>
-                                <button 
-                                    data-help="cart"
-                                    onClick={handleAddToCart}
-                                    className="flex-1 min-h-[48px] py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded-full font-bold flex items-center justify-center gap-1.5 text-xs sm:text-sm transition-all active:scale-[0.98]"
-                                >
-                                    <ShoppingCart className="w-4 h-4" /> {t('common.add_to_cart', { defaultValue: 'Add to Cart' })}
-                                </button>
-                                <button 
-                                    data-help="buy-now"
-                                    onClick={handleBuyNow}
-                                    className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-1.5 text-xs sm:text-sm transition-all active:scale-[0.98]"
-                                >
-                                    {t('common.buy_now', { defaultValue: 'Buy Now' })}
-                                </button>
-                            </>
-                        )}
-                    </>
+                    <button 
+                        data-help="enquiry"
+                        onClick={handleEnquiry} 
+                        className="flex-1 min-h-[48px] py-3 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 text-sm transition-all active:scale-[0.98]"
+                    >
+                        <Mail className="w-4 h-4" /> {t('buyer.send_enquiry', { defaultValue: 'Send Enquiry' })}
+                    </button>
                 )}
             </div>
 

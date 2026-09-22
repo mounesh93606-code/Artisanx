@@ -59,9 +59,14 @@ export default function Orders() {
                     <h3 className="font-bold text-stone-800 text-lg">{o.display_id}</h3>
                     <p className="text-xs font-bold text-stone-500 mt-0.5">{o.product_snapshot?.title || 'Product'}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${getStatusColor(o.status)}`}>
-                    {o.status.replace(/_/g, ' ')}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-green-100 text-green-800 uppercase">
+                      PAID
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${getStatusColor(o.status)}`}>
+                      {o.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-3 mb-4">

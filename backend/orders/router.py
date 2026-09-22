@@ -386,3 +386,8 @@ def decision_cancel_order(id: str, decision: dict, current_user: dict = Depends(
     )
     
     return {"status": "success", "new_status": new_status}
+
+@router.get("/{id}/invoice")
+async def get_order_invoice_alias(id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
+    from payments.router import get_invoice
+    return await get_invoice(id, current_user, token)

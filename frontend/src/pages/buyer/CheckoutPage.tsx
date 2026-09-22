@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, ShieldCheck, MapPin, Truck, CreditCard, ArrowRight, Package } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, MapPin, Truck, CreditCard, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -37,11 +37,10 @@ export default function CheckoutPage() {
     const [stateName, setStateName] = useState('');
     const [pincode, setPincode] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
+    const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
 
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [placedOrder, setPlacedOrder] = useState<any | null>(null);
 
     const subtotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = 0;
@@ -69,52 +68,73 @@ export default function CheckoutPage() {
         };
 
         try {
-            if (checkoutItems.length === 1) {
-                // Single order creation
-                const item = checkoutItems[0];
-                const res = await api.post('/orders/', {
-                    product_id: item.productId,
-                    quantity: item.quantity,
-                    enquiry_id: item.enquiryId || null,
-                    variant: item.variant || null,
-                    customization_details: item.customization || null,
-                    delivery_address: deliveryAddress,
-                    notes: notes.trim() || null
-                });
+            const itemsPayload = checkoutItems.map(item => ({
+                product_id: item.productId,
+                quantity: item.quantity,
+                enquiry_id: item.enquiryId || null,
+                variant: item.variant || null,
+                customization: item.customization || null
+            }));
 
-                if (isDirect) {
-                    setDirectItem(null);
-                } else {
-                    clearCart();
+            const returnUrl = `${window.location.origin}/buyer/payment/status?order_id={order_id}`;
+
+            // Call Cashfree order creation endpoint
+            const res = await api.post('/payments/cashfree/create-order', {
+                items: itemsPayload,
+                delivery_address: deliveryAddress,
+                notes: notes.trim() || null,
+                is_direct: isDirect,
+                return_url: returnUrl
+            });
+
+            // Clean up cart store
+            if (isDirect) {
+                setDirectItem(null);
+            } else {
+                clearCart();
+            }
+
+            const { payment_session_id, order_id, environment, checkout_url } = res.data;
+
+            if (payment_session_id && !payment_session_id.startsWith('sandbox_session_')) {
+                const targetCheckoutUrl = checkout_url || (
+                    (environment || '').toLowerCase() === 'production'
+                        ? `https://api.cashfree.com/checkout/?pt=${payment_session_id}`
+                        : `https://sandbox.cashfree.com/checkout/?pt=${payment_session_id}`
+                );
+
+                const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                // On mobile devices, Cashfree JS SDK's PayFast modal is blocked by third-party cookie restrictions in Android Chrome/Safari.
+                // Navigating directly to Cashfree's hosted checkout page with ?pt= avoids cookie restrictions entirely.
+                if (isMobile) {
+                    window.location.href = targetCheckoutUrl;
+                    return;
                 }
 
-                setPlacedOrder(res.data.order || { id: res.data.order_id, display_id: res.data.display_id, total_order_value: total });
-            } else {
-                // Batch order checkout
-                const batchItems = checkoutItems.map(item => ({
-                    product_id: item.productId,
-                    quantity: item.quantity,
-                    enquiry_id: item.enquiryId || null,
-                    variant: item.variant || null,
-                    customization_details: item.customization || null,
-                    delivery_address: deliveryAddress,
-                    notes: notes.trim() || null
-                }));
+                // On desktop, attempt Cashfree SDK first, then fallback to hosted checkout URL
+                const cfGlobal = (window as any).Cashfree;
+                if (cfGlobal) {
+                    try {
+                        const cashfree = cfGlobal({ mode: (environment || 'sandbox').toLowerCase() });
+                        cashfree.checkout({
+                            paymentSessionId: payment_session_id,
+                            redirectTarget: '_self'
+                        });
+                        return;
+                    } catch (sdkErr) {
+                        console.warn('Cashfree SDK invocation fallback', sdkErr);
+                    }
+                }
 
-                const res = await api.post('/orders/checkout', {
-                    items: batchItems,
-                    delivery_address: deliveryAddress,
-                    notes: notes.trim() || null
-                });
-
-                clearCart();
-                setPlacedOrder({
-                    id: res.data.order_ids?.[0],
-                    display_id: res.data.display_ids?.join(', ') || 'BATCH-ORDER',
-                    total_order_value: total,
-                    orders_count: res.data.orders?.length || checkoutItems.length
-                });
+                // Fallback to hosted URL navigation
+                window.location.href = targetCheckoutUrl;
+                return;
             }
+
+            // Fallback or Sandbox mock redirection
+            navigate(`/buyer/payment/status?order_id=${order_id}`);
+
         } catch (err: any) {
             console.error('Order placement failed', err);
             const msg = err.response?.data?.detail || t('checkout.order_failed');
@@ -124,54 +144,7 @@ export default function CheckoutPage() {
         }
     };
 
-    if (placedOrder) {
-        return (
-            <div className="w-full min-h-screen bg-surface-container-lowest p-6 flex flex-col justify-center items-center text-center">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-6 animate-in zoom-in-90">
-                    <CheckCircle2 className="w-12 h-12" />
-                </div>
 
-                <h1 className="text-2xl font-black text-stone-800 mb-2">{t('checkout.order_success')}</h1>
-                <p className="text-sm text-stone-500 max-w-xs mb-6">
-                    {t('checkout.order_success_desc')}
-                </p>
-
-                <div className="w-full max-w-md bg-surface border border-outline-variant rounded-2xl p-5 mb-8 text-left space-y-3 shadow-sm">
-                    <div className="flex justify-between items-center text-sm border-b border-stone-100 pb-2">
-                        <span className="text-stone-500 font-medium">{t('orders.order_id')}</span>
-                        <span className="font-bold text-primary font-mono">{placedOrder.display_id}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm border-b border-stone-100 pb-2">
-                        <span className="text-stone-500 font-medium">{t('cart.total')}</span>
-                        <span className="font-extrabold text-stone-800">₹{total.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm border-b border-stone-100 pb-2">
-                        <span className="text-stone-500 font-medium">{t('checkout.payment_method')}</span>
-                        <span className="font-semibold text-stone-700 uppercase">{paymentMethod}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-stone-500 font-medium">{t('common.status')}</span>
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-800 uppercase">{t('order_status.confirmed')}</span>
-                    </div>
-                </div>
-
-                <div className="w-full max-w-md flex flex-col gap-3">
-                    <button 
-                        onClick={() => navigate(placedOrder.id ? `/buyer/orders/${placedOrder.id}` : '/buyer/orders')}
-                        className="w-full py-3.5 bg-primary text-on-primary font-bold rounded-full shadow-lg hover:bg-primary/90 flex items-center justify-center gap-2 transition-transform active:scale-95"
-                    >
-                        {t('orders.track_order')} <ArrowRight className="w-4 h-4" />
-                    </button>
-                    <button 
-                        onClick={() => navigate('/buyer/catalogue')}
-                        className="w-full py-3 text-stone-600 font-bold hover:text-stone-900 transition-colors"
-                    >
-                        {t('cart.continue_shopping')}
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="w-full relative pb-32 bg-surface-container-lowest min-h-screen">
@@ -325,13 +298,38 @@ export default function CheckoutPage() {
 
                     <div className="space-y-2">
                         <label 
+                            onClick={() => setPaymentMethod('upi')}
+                            className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
+                                paymentMethod === 'upi' ? 'border-primary bg-primary-container/20 ring-1 ring-primary' : 'border-stone-200 hover:bg-stone-50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <ShieldCheck className="w-6 h-6 text-primary" />
+                                <div>
+                                    <div className="font-bold text-sm text-stone-800 flex items-center gap-2">
+                                        {t('checkout.cashfree_upi')}
+                                        <span className="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">Recommended</span>
+                                    </div>
+                                    <div className="text-xs text-stone-500">{t('checkout.cashfree_upi_desc')}</div>
+                                </div>
+                            </div>
+                            <input 
+                                type="radio" 
+                                name="payment" 
+                                checked={paymentMethod === 'upi'} 
+                                onChange={() => setPaymentMethod('upi')} 
+                                className="accent-primary"
+                            />
+                        </label>
+
+                        <label 
                             onClick={() => setPaymentMethod('cod')}
                             className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
                                 paymentMethod === 'cod' ? 'border-primary bg-primary-container/20' : 'border-stone-200 hover:bg-stone-50'
                             }`}
                         >
                             <div className="flex items-center gap-3">
-                                <Truck className="w-5 h-5 text-primary" />
+                                <Truck className="w-5 h-5 text-stone-500" />
                                 <div>
                                     <div className="font-bold text-sm text-stone-800">{t('checkout.cod')}</div>
                                     <div className="text-xs text-stone-500">{t('checkout.cod_desc')}</div>
@@ -342,28 +340,6 @@ export default function CheckoutPage() {
                                 name="payment" 
                                 checked={paymentMethod === 'cod'} 
                                 onChange={() => setPaymentMethod('cod')} 
-                                className="accent-primary"
-                            />
-                        </label>
-
-                        <label 
-                            onClick={() => setPaymentMethod('upi')}
-                            className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
-                                paymentMethod === 'upi' ? 'border-primary bg-primary-container/20' : 'border-stone-200 hover:bg-stone-50'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <ShieldCheck className="w-5 h-5 text-tertiary" />
-                                <div>
-                                    <div className="font-bold text-sm text-stone-800">Direct Artisan UPI</div>
-                                    <div className="text-xs text-stone-500">Fast UPI transfer directly to artisan on dispatch</div>
-                                </div>
-                            </div>
-                            <input 
-                                type="radio" 
-                                name="payment" 
-                                checked={paymentMethod === 'upi'} 
-                                onChange={() => setPaymentMethod('upi')} 
                                 className="accent-primary"
                             />
                         </label>
@@ -401,7 +377,8 @@ export default function CheckoutPage() {
                             </>
                         ) : (
                             <>
-                                {t('checkout.place_order')} (₹{total.toLocaleString()})
+                                <ShieldCheck className="w-5 h-5" />
+                                {t('checkout.place_order')} ₹{total.toLocaleString()} {paymentMethod === 'upi' ? '(UPI)' : ''}
                             </>
                         )}
                     </button>
