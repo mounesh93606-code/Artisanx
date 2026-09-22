@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck, MapPin, Truck, CreditCard, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore, type CartItem } from '../../stores/cartStore';
 
@@ -76,7 +78,11 @@ export default function CheckoutPage() {
                 customization: item.customization || null
             }));
 
-            const returnUrl = `${window.location.origin}/buyer/payment/status?order_id={order_id}`;
+            const isNative = Capacitor.isNativePlatform();
+            const firstProductId = checkoutItems[0]?.productId || '';
+            const returnUrl = isNative
+                ? `artisanx://payment/status?order_id={order_id}&product_id=${firstProductId}`
+                : `${window.location.origin}/buyer/payment/status?order_id={order_id}&product_id=${firstProductId}`;
 
             // Call Cashfree order creation endpoint
             const res = await api.post('/payments/cashfree/create-order', {
@@ -103,10 +109,16 @@ export default function CheckoutPage() {
                         : `https://sandbox.cashfree.com/checkout/?pt=${payment_session_id}`
                 );
 
+                // If running inside Capacitor native Android app, open with Browser plugin
+                // so user completes payment and Cashfree redirects back to artisanx://
+                if (isNative) {
+                    await Browser.open({ url: targetCheckoutUrl });
+                    return;
+                }
+
                 const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-                // On mobile devices, Cashfree JS SDK's PayFast modal is blocked by third-party cookie restrictions in Android Chrome/Safari.
-                // Navigating directly to Cashfree's hosted checkout page with ?pt= avoids cookie restrictions entirely.
+                // On mobile web devices, navigate directly to Cashfree's hosted checkout page
                 if (isMobile) {
                     window.location.href = targetCheckoutUrl;
                     return;

@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from typing import Optional, Dict, Any
 
-from auth.dependencies import get_current_user, get_token
+from auth.dependencies import get_current_user, get_optional_user, get_token
 from database import get_service_client, get_authenticated_client
 from config import settings
 from .schemas import (
@@ -267,15 +267,13 @@ async def cashfree_webhook(
 @router.get("/cashfree/status/{order_id}", response_model=PaymentStatusResponse)
 async def get_payment_status(
     order_id: str,
-    current_user: dict = Depends(get_current_user),
-    token: str = Depends(get_token)
+    current_user: Optional[dict] = Depends(get_optional_user)
 ):
     """
     Retrieves the verified payment status of an order.
     Queries Cashfree directly if the order is still marked as pending in the local database.
     """
     service_client = get_service_client()
-    user_id = current_user.get("id")
 
     # Look up order safely by id, display_id, gateway_order_id, or snapshot
     orders = find_orders_by_identifier(service_client, order_id)
@@ -285,9 +283,11 @@ async def get_payment_status(
 
     order = orders[0]
 
-    # Verify authorization
-    if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # Verify authorization if user is authenticated
+    if current_user:
+        user_id = current_user.get("id")
+        if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     # Check stored status
     stored_status = order.get("payment_status") or order.get("product_snapshot", {}).get("payment", {}).get("status") or "payment_initiated"
@@ -308,7 +308,8 @@ async def get_payment_status(
             payment_method="upi",
             invoice_id=invoice_meta.get("invoice_number") or order.get("invoice_id"),
             gateway_payment_id=payment_meta.get("gateway_payment_id") or order.get("gateway_payment_id"),
-            paid_at=order.get("paid_at") or payment_meta.get("paid_at")
+            paid_at=order.get("paid_at") or payment_meta.get("paid_at"),
+            product_id=order.get("product_id")
         )
 
     # If pending locally, query Cashfree API for real-time status
@@ -353,20 +354,20 @@ async def get_payment_status(
         payment_method="upi",
         invoice_id=invoice_meta.get("invoice_number") or order.get("invoice_id"),
         gateway_payment_id=payment_meta.get("gateway_payment_id") or order.get("gateway_payment_id"),
-        paid_at=order.get("paid_at") or payment_meta.get("paid_at")
+        paid_at=order.get("paid_at") or payment_meta.get("paid_at"),
+        product_id=order.get("product_id")
     )
 
 @router.get("/invoice/{order_id}", response_model=InvoiceResponse)
 async def get_invoice(
     order_id: str,
-    current_user: dict = Depends(get_current_user),
-    token: str = Depends(get_token)
+    current_user: Optional[dict] = Depends(get_optional_user),
+    token: Optional[str] = None
 ):
     """
     Retrieves the generated invoice for a confirmed, paid order.
     """
     service_client = get_service_client()
-    user_id = current_user.get("id")
 
     # 1. Fetch order safely
     orders = find_orders_by_identifier(
@@ -382,9 +383,11 @@ async def get_invoice(
 
     order = orders[0]
 
-    # 2. Verify authorization
-    if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # 2. Verify authorization if user authenticated
+    if current_user:
+        user_id = current_user.get("id")
+        if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     # 3. Check if order is paid
     payment_status = order.get("payment_status") or order.get("product_snapshot", {}).get("payment", {}).get("status")

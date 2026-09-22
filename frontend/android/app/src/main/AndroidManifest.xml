@@ -23,13 +23,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep linking for QR code scans and product links -->
+            <!-- Deep linking for artisanx:// custom scheme (payments, redirects, etc.) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="artisanx" />
-                <data android:scheme="https" android:pathPrefix="/product" />
+            </intent-filter>
+
+            <!-- Deep linking for QR code scans and product HTTPS links -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="artisanx.app" android:pathPrefix="/product" />
             </intent-filter>
 
         </activity>

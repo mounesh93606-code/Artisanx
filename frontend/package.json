@@ -13,6 +13,7 @@
     "@capacitor-firebase/authentication": "^8.5.2",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.114.0",

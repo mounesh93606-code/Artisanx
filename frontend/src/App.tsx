@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
@@ -113,6 +114,68 @@ const BackButtonHandler: React.FC = () => {
   return null;
 };
 
+const AppUrlListener: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listenerHandle: any = null;
+
+    const handleUrl = (rawUrl: string) => {
+      try {
+        // Automatically close in-app browser if open
+        Browser.close().catch(() => {});
+
+        // Handles "artisanx://payment/status?order_id=...&product_id=..."
+        const normalized = rawUrl.replace(/^artisanx:\/\//, 'https://artisanx.app/');
+        const parsed = new URL(normalized);
+        const path = parsed.pathname;
+        const search = parsed.search;
+
+        if (path.includes('payment/status')) {
+          navigate(`/buyer/payment/status${search}`);
+        } else if (path.startsWith('/product/')) {
+          navigate(path);
+        } else if (path.startsWith('/buyer/') || path.startsWith('/artisan/')) {
+          navigate(`${path}${search}`);
+        } else {
+          navigate(`${path}${search}`);
+        }
+      } catch (e) {
+        console.warn('Failed to parse appUrlOpen URL', rawUrl, e);
+      }
+    };
+
+    const setupListener = async () => {
+      try {
+        const launchUrl = await CapApp.getLaunchUrl();
+        if (launchUrl && launchUrl.url) {
+          handleUrl(launchUrl.url);
+        }
+      } catch (err) {
+        console.warn('Error reading launch URL', err);
+      }
+
+      listenerHandle = await CapApp.addListener('appUrlOpen', (event: any) => {
+        if (event && event.url) {
+          handleUrl(event.url);
+        }
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
+  }, [navigate]);
+
+  return null;
+};
+
 function App() {
   const { checkAuth } = useAuthStore();
 
@@ -123,6 +186,7 @@ function App() {
   return (
     <BrowserRouter>
       <BackButtonHandler />
+      <AppUrlListener />
       <Routes>
         
         {/* Auth Routes */}

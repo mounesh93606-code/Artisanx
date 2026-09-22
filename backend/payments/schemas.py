@@ -38,6 +38,7 @@ class PaymentStatusResponse(BaseModel):
     invoice_id: Optional[str] = None
     gateway_payment_id: Optional[str] = None
     paid_at: Optional[str] = None
+    product_id: Optional[str] = None
 
 class InvoiceResponse(BaseModel):
     invoice_number: str
