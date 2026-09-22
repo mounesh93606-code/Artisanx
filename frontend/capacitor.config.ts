@@ -12,7 +12,8 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'https',
-    cleartext: true
+    cleartext: true,
+    allowNavigation: ["*.cashfree.com", "cashfree.com"]
   }
 };
 

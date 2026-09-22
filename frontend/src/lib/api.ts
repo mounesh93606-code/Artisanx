@@ -5,6 +5,11 @@ export const getApiUrl = (): string => {
     if (typeof window !== 'undefined') {
         const customUrl = localStorage.getItem('artisanx_api_url');
         if (customUrl) return customUrl;
+
+        // If loaded from a LAN/Wi-Fi IP in mobile browser (e.g. 192.168.x.x)
+        if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            return `${window.location.protocol}//${window.location.hostname}:8000`;
+        }
     }
     if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
     if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
