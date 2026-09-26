@@ -20,4 +20,5 @@ google-genai
 scikit-learn
 joblib
 pandas
+reportlab
 
