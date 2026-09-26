@@ -525,6 +525,7 @@ export default function ProductDetail() {
                             <span>Digital Product Passport</span>
                         </h3>
                         <ProductPassport 
+                            productId={id}
                             passportData={passport.passport_data} 
                             qrCodeUrl={passport.qr_code_url} 
                             shareableUrl={passport.shareable_url} 

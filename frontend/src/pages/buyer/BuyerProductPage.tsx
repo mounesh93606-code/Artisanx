@@ -628,6 +628,7 @@ export default function BuyerProductPage() {
                     <div className="mt-8">
                         <h3 className="font-bold text-stone-800 text-lg mb-4">{t('passport.authenticity', { defaultValue: 'Product Passport' })}</h3>
                         <ProductPassport 
+                            productId={id}
                             passportData={{
                                 ...passport.passport_data,
                                 title: displayTitle,

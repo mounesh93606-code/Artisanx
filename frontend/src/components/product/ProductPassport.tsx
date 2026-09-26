@@ -28,24 +28,37 @@ interface Props {
   passportData: PassportData;
   qrCodeUrl: string;
   shareableUrl: string;
+  productId?: string;
   onEnquire?: () => void;
   isArtisanView?: boolean;
 }
 
-export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl, onEnquire, isArtisanView = false }: Props) {
+export default function ProductPassport({ passportData, qrCodeUrl: _qrCodeUrl, shareableUrl, productId, onEnquire, isArtisanView = false }: Props) {
   const { t } = useTranslation();
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [shareSuccess, setShareSuccess] = useState(false);
 
-  const cleanShareUrl = shareableUrl && !shareableUrl.includes('localhost') && !shareableUrl.includes('127.0.0.1')
-    ? shareableUrl
-    : typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
-      ? window.location.href
-      : (shareableUrl?.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://artisanx-frontend.vercel.app') || 'https://artisanx-frontend.vercel.app');
+  // Extract UUID or productId from prop, shareableUrl, or window location
+  let resolvedProductId = productId;
+  if (!resolvedProductId && shareableUrl) {
+    const match = shareableUrl.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i) || shareableUrl.match(/\/product\/([^\/?#]+)/i);
+    if (match) {
+      resolvedProductId = match[1];
+    }
+  }
+  if (!resolvedProductId && typeof window !== 'undefined') {
+    const match = window.location.pathname.match(/\/product\/([^\/?#]+)/i);
+    if (match) {
+      resolvedProductId = match[1];
+    }
+  }
 
-  const cleanQrCodeUrl = qrCodeUrl && !qrCodeUrl.includes('localhost') && !qrCodeUrl.includes('127.0.0.1')
-    ? qrCodeUrl
-    : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=9A4023&data=${encodeURIComponent(cleanShareUrl)}`;
+  const cleanShareUrl = resolvedProductId 
+    ? `https://artisanx-frontend.vercel.app/product/${resolvedProductId}`
+    : 'https://artisanx-frontend.vercel.app';
+
+  // Always generate a fresh high-resolution QR code that encodes the live public Vercel URL
+  const cleanQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=9A4023&margin=8&data=${encodeURIComponent(cleanShareUrl)}`;
 
   const images = passportData.images?.length > 0 ? passportData.images : [{ image_url: 'https://via.placeholder.com/400x400?text=No+Image', is_main: true }];
 

@@ -312,6 +312,7 @@ export default function PublicProductPage() {
                 <span>Official Digital Product Passport</span>
               </h3>
               <ProductPassport 
+                productId={productId || product.id}
                 passportData={{
                   ...passport.passport_data,
                   title: displayTitle,
