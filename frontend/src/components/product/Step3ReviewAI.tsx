@@ -27,6 +27,8 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [activeLang, setActiveLang] = useState<string>('en');
     const [isPlayingSpeech, setIsPlayingSpeech] = useState(false);
+    const [translatingLang, setTranslatingLang] = useState<string | null>(null);
+    const [isTranslatingAll, setIsTranslatingAll] = useState(false);
 
     useEffect(() => {
         return () => {
@@ -35,6 +37,78 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
             }
         };
     }, []);
+
+    const translateLanguage = async (targetLang: string) => {
+        if (!catalogueData || targetLang === 'en') return;
+        setTranslatingLang(targetLang);
+        try {
+            const { data } = await api.post('/products/translate', {
+                title: catalogueData.title || '',
+                description: catalogueData.full_description || catalogueData.description || '',
+                short_description: catalogueData.short_description || '',
+                full_description: catalogueData.full_description || catalogueData.description || '',
+                key_highlights: catalogueData.key_highlights || [],
+                craft_story: catalogueData.product_story || '',
+                care_instructions: catalogueData.care_instructions || '',
+                target_language: targetLang,
+                source_language: 'en'
+            });
+
+            if (data) {
+                const transObj = {
+                    title: data.title || catalogueData.title,
+                    short_description: data.short_description || catalogueData.short_description || '',
+                    full_description: data.full_description || data.description || catalogueData.full_description || catalogueData.description || '',
+                    key_highlights: Array.isArray(data.key_highlights) && data.key_highlights.length > 0 
+                        ? data.key_highlights 
+                        : (catalogueData.key_highlights || []),
+                    product_story: data.craft_story || catalogueData.product_story || '',
+                    care_instructions: data.care_instructions || catalogueData.care_instructions || ''
+                };
+
+                setCatalogueData((prev: any) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        translations: {
+                            ...(prev.translations || {}),
+                            [targetLang]: transObj
+                        }
+                    };
+                });
+            }
+        } catch (err) {
+            console.error(`Failed to auto-translate to ${targetLang}:`, err);
+        } finally {
+            setTranslatingLang((cur) => (cur === targetLang ? null : cur));
+        }
+    };
+
+    // Auto-translate on-the-fly when user switches to a regional language tab
+    useEffect(() => {
+        if (!catalogueData || activeLang === 'en') return;
+        if (!catalogueData.title && !catalogueData.description && !catalogueData.full_description) return;
+
+        const trans = catalogueData.translations?.[activeLang];
+        const isTranslated = !!trans?.title && trans.title.trim() !== '' && trans.title !== catalogueData.title;
+
+        if (!isTranslated && translatingLang !== activeLang) {
+            translateLanguage(activeLang);
+        }
+    }, [activeLang, catalogueData?.title, catalogueData?.full_description]);
+
+    const handleTranslateAllLanguages = async () => {
+        if (!catalogueData) return;
+        setIsTranslatingAll(true);
+        const nonEnLangs = LANGUAGES.filter(l => l.code !== 'en');
+        try {
+            for (const l of nonEnLangs) {
+                await translateLanguage(l.code);
+            }
+        } finally {
+            setIsTranslatingAll(false);
+        }
+    };
 
     const handleManualEntry = () => {
         setCatalogueData({
@@ -288,10 +362,19 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
     }
 
     const currentTranslation = catalogueData.translations?.[activeLang];
-    const displayTitle = (activeLang !== 'en' && currentTranslation?.title) ? currentTranslation.title : catalogueData.title;
-    const displayShortDesc = (activeLang !== 'en' && currentTranslation?.short_description) ? currentTranslation.short_description : (catalogueData.short_description || '');
-    const displayFullDesc = (activeLang !== 'en' && currentTranslation?.full_description) ? currentTranslation.full_description : (catalogueData.full_description || catalogueData.description);
-    const displayHighlights = (activeLang !== 'en' && currentTranslation?.key_highlights?.length) ? currentTranslation.key_highlights : (catalogueData.key_highlights || []);
+    const isTransActive = activeLang !== 'en';
+    const displayTitle = (isTransActive && currentTranslation?.title && currentTranslation.title !== catalogueData.title) 
+        ? currentTranslation.title 
+        : catalogueData.title;
+    const displayShortDesc = (isTransActive && currentTranslation?.short_description) 
+        ? currentTranslation.short_description 
+        : (catalogueData.short_description || '');
+    const displayFullDesc = (isTransActive && currentTranslation?.full_description) 
+        ? currentTranslation.full_description 
+        : (catalogueData.full_description || catalogueData.description);
+    const displayHighlights = (isTransActive && currentTranslation?.key_highlights?.length) 
+        ? currentTranslation.key_highlights 
+        : (catalogueData.key_highlights || []);
 
     return (
         <div className="flex flex-col gap-5" data-guide-id="product-description" data-help="product-description" id="product-description">
@@ -317,7 +400,11 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                         <Globe className="w-3.5 h-3.5" /> Language:
                     </div>
                     {LANGUAGES.map((l) => {
-                        const hasTrans = l.code === 'en' || !!catalogueData.translations?.[l.code];
+                        const isTranslated = l.code === 'en' || (
+                            !!catalogueData.translations?.[l.code]?.title &&
+                            catalogueData.translations[l.code].title !== catalogueData.title
+                        );
+                        const isCurrentTranslating = translatingLang === l.code || (isTranslatingAll && l.code !== 'en');
                         return (
                             <button
                                 key={l.code}
@@ -329,20 +416,44 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                                     }
                                     setActiveLang(l.code);
                                 }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all flex items-center gap-1 ${
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 ${
                                     activeLang === l.code
                                         ? 'bg-primary text-on-primary shadow-sm ring-2 ring-primary/30'
-                                        : hasTrans
+                                        : isTranslated
                                         ? 'bg-surface-container-low text-on-surface hover:bg-surface-container'
                                         : 'bg-surface-container-low/50 text-outline'
                                 }`}
                             >
                                 <span>{l.native}</span>
-                                {hasTrans && <Check className="w-3 h-3 text-primary-fixed" />}
+                                {isCurrentTranslating && (
+                                    <span className="material-symbols-outlined text-[13px] animate-spin">progress_activity</span>
+                                )}
+                                {!isCurrentTranslating && isTranslated && l.code !== 'en' && (
+                                    <Check className="w-3 h-3 text-emerald-500 stroke-[3]" />
+                                )}
                             </button>
                         );
                     })}
+
+                    <button
+                        type="button"
+                        onClick={handleTranslateAllLanguages}
+                        disabled={isTranslatingAll || !!translatingLang}
+                        className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary-container/60 text-primary hover:bg-primary-container shrink-0 flex items-center gap-1 transition-all disabled:opacity-50 ml-auto"
+                        title="Translate across all 8 regional Indic languages"
+                    >
+                        <span className={`material-symbols-outlined text-[14px] ${isTranslatingAll ? 'animate-spin' : ''}`}>translate</span>
+                        <span>{isTranslatingAll ? 'Translating All...' : 'Translate All 8'}</span>
+                    </button>
                 </div>
+
+                {/* Translating Status Banner */}
+                {translatingLang === activeLang && (
+                    <div className="flex items-center gap-2.5 p-3 bg-primary-container/40 border border-primary/20 rounded-2xl text-on-primary-container text-xs font-semibold animate-pulse mt-3">
+                        <span className="material-symbols-outlined text-[18px] animate-spin text-primary">progress_activity</span>
+                        <span>Translating catalogue into <strong>{LANGUAGES.find(l => l.code === activeLang)?.native} ({LANGUAGES.find(l => l.code === activeLang)?.label})</strong>...</span>
+                    </div>
+                )}
 
                 {/* Action Bar: Listen (TTS), Regenerate, Re-record */}
                 <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-surface-container">
@@ -396,8 +507,24 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                     </div>
                     {editingField === 'title' ? (
                         <Input 
-                            value={catalogueData.title}
-                            onChange={(e) => setCatalogueData({...catalogueData, title: e.target.value})}
+                            value={activeLang === 'en' ? catalogueData.title : (currentTranslation?.title || displayTitle || '')}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (activeLang === 'en') {
+                                    setCatalogueData({...catalogueData, title: val});
+                                } else {
+                                    setCatalogueData({
+                                        ...catalogueData,
+                                        translations: {
+                                            ...(catalogueData.translations || {}),
+                                            [activeLang]: {
+                                                ...(catalogueData.translations?.[activeLang] || {}),
+                                                title: val
+                                            }
+                                        }
+                                    });
+                                }
+                            }}
                             className="mt-2"
                             autoFocus
                         />
@@ -411,7 +538,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                     <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm flex flex-col group border border-outline-variant/30">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] uppercase tracking-wider text-outline font-bold">
-                                Quick Summary (For Mobile Cards)
+                                Quick Summary ({LANGUAGES.find(l => l.code === activeLang)?.label})
                             </span>
                             <button 
                                 onClick={() => setEditingField(editingField === 'short_description' ? null : 'short_description')} 
@@ -422,8 +549,24 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                         </div>
                         {editingField === 'short_description' ? (
                             <textarea 
-                                value={catalogueData.short_description || ''}
-                                onChange={(e) => setCatalogueData({...catalogueData, short_description: e.target.value})}
+                                value={activeLang === 'en' ? (catalogueData.short_description || '') : (currentTranslation?.short_description || displayShortDesc || '')}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (activeLang === 'en') {
+                                        setCatalogueData({...catalogueData, short_description: val});
+                                    } else {
+                                        setCatalogueData({
+                                            ...catalogueData,
+                                            translations: {
+                                                ...(catalogueData.translations || {}),
+                                                [activeLang]: {
+                                                    ...(catalogueData.translations?.[activeLang] || {}),
+                                                    short_description: val
+                                                }
+                                            }
+                                        });
+                                    }
+                                }}
                                 rows={3}
                                 className="w-full mt-2 p-3 rounded-2xl border-2 border-surface-container-high bg-surface-container-lowest focus:border-primary focus:ring-0 text-on-surface font-medium leading-relaxed resize-y"
                                 autoFocus
@@ -438,7 +581,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                 <div data-help="description" className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm flex flex-col group border border-outline-variant/30">
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] uppercase tracking-wider text-outline font-bold">
-                            Full E-Commerce Description
+                            Full E-Commerce Description ({LANGUAGES.find(l => l.code === activeLang)?.label})
                         </span>
                         <button 
                             onClick={() => setEditingField(editingField === 'description' ? null : 'description')} 
@@ -449,8 +592,25 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                     </div>
                     {editingField === 'description' ? (
                         <textarea 
-                            value={catalogueData.description}
-                            onChange={(e) => setCatalogueData({...catalogueData, description: e.target.value, full_description: e.target.value})}
+                            value={activeLang === 'en' ? (catalogueData.description || catalogueData.full_description || '') : (currentTranslation?.full_description || currentTranslation?.description || displayFullDesc || '')}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (activeLang === 'en') {
+                                    setCatalogueData({...catalogueData, description: val, full_description: val});
+                                } else {
+                                    setCatalogueData({
+                                        ...catalogueData,
+                                        translations: {
+                                            ...(catalogueData.translations || {}),
+                                            [activeLang]: {
+                                                ...(catalogueData.translations?.[activeLang] || {}),
+                                                full_description: val,
+                                                description: val
+                                            }
+                                        }
+                                    });
+                                }
+                            }}
                             rows={4}
                             className="w-full mt-2 p-3 rounded-2xl border-2 border-surface-container-high bg-surface-container-lowest focus:border-primary focus:ring-0 text-on-surface font-medium leading-relaxed resize-y"
                             autoFocus
@@ -464,7 +624,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                 {displayHighlights && displayHighlights.length > 0 && (
                     <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm flex flex-col group border border-outline-variant/30">
                         <span className="text-[11px] uppercase tracking-wider text-outline font-bold mb-3 flex items-center gap-1.5">
-                            <Check className="w-4 h-4 text-primary" /> Key Craft Highlights
+                            <Check className="w-4 h-4 text-primary" /> Key Craft Highlights ({LANGUAGES.find(l => l.code === activeLang)?.label})
                         </span>
                         <ul className="space-y-2">
                             {displayHighlights.map((hl: string, idx: number) => (
@@ -482,7 +642,7 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                     <div className="bg-gradient-to-br from-secondary-container/20 to-surface-container-lowest rounded-3xl p-5 shadow-sm border border-secondary/20">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[11px] uppercase tracking-wider text-secondary font-bold flex items-center gap-1.5">
-                                <BookOpen className="w-4 h-4 text-secondary" /> Cultural Craft Story
+                                <BookOpen className="w-4 h-4 text-secondary" /> Cultural Craft Story ({LANGUAGES.find(l => l.code === activeLang)?.label})
                             </span>
                             <button 
                                 onClick={() => setEditingField(editingField === 'product_story' ? null : 'product_story')} 
@@ -493,14 +653,32 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                         </div>
                         {editingField === 'product_story' ? (
                             <textarea 
-                                value={catalogueData.product_story}
-                                onChange={(e) => setCatalogueData({...catalogueData, product_story: e.target.value})}
+                                value={activeLang === 'en' ? (catalogueData.product_story || '') : (currentTranslation?.product_story || catalogueData.product_story || '')}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (activeLang === 'en') {
+                                        setCatalogueData({...catalogueData, product_story: val});
+                                    } else {
+                                        setCatalogueData({
+                                            ...catalogueData,
+                                            translations: {
+                                                ...(catalogueData.translations || {}),
+                                                [activeLang]: {
+                                                    ...(catalogueData.translations?.[activeLang] || {}),
+                                                    product_story: val
+                                                }
+                                            }
+                                        });
+                                    }
+                                }}
                                 rows={4}
                                 className="w-full mt-2 p-3 rounded-2xl border-2 border-secondary/40 bg-surface-container-lowest focus:border-secondary focus:ring-0 text-on-surface font-medium leading-relaxed resize-y"
                                 autoFocus
                             />
                         ) : (
-                            <p className="text-sm text-on-surface italic leading-relaxed mt-1">{catalogueData.product_story}</p>
+                            <p className="text-sm text-on-surface italic leading-relaxed mt-1">
+                                {(activeLang !== 'en' && currentTranslation?.product_story) ? currentTranslation.product_story : catalogueData.product_story}
+                            </p>
                         )}
                         {catalogueData.craft_type && (
                             <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-secondary/10">

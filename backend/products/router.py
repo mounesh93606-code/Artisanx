@@ -146,12 +146,15 @@ def route_duplicate_product(product_id: str, current_user: Any = Depends(get_cur
     return {"status": "success", "new_product_id": new_id}
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 class ProductTranslateRequest(BaseModel):
     product_id: Optional[str] = None
     title: Optional[str] = ""
     description: Optional[str] = ""
+    short_description: Optional[str] = ""
+    full_description: Optional[str] = ""
+    key_highlights: Optional[List[str]] = []
     craft_story: Optional[str] = ""
     care_instructions: Optional[str] = ""
     target_language: str = "hi"
@@ -162,17 +165,65 @@ def route_translate_product(req: ProductTranslateRequest):
     if not req.target_language or req.target_language == "en":
         return {
             "title": req.title or "",
-            "description": req.description or "",
+            "description": req.description or req.full_description or "",
+            "short_description": req.short_description or "",
+            "full_description": req.full_description or req.description or "",
+            "key_highlights": req.key_highlights or [],
             "craft_story": req.craft_story or "",
             "care_instructions": req.care_instructions or ""
         }
     
     lang_names = {
         "hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada",
-        "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi", "ur": "Urdu", "en": "English"
+        "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati",
+        "ur": "Urdu", "en": "English"
     }
     target_name = lang_names.get(req.target_language, req.target_language)
     
+    # 1. First try Bhashini NMT (fast & accurate for Indian languages)
+    try:
+        from ai.bhashini_client import bhashini_client
+        fields_to_trans = {
+            "title": req.title or "",
+            "short_description": req.short_description or req.description or "",
+            "full_description": req.full_description or req.description or "",
+            "key_highlights": req.key_highlights or []
+        }
+        bhash_res = bhashini_client.translate_catalogue_fields(
+            fields_to_trans,
+            source_lang="en",
+            target_langs=[req.target_language]
+        )
+        if bhash_res and req.target_language in bhash_res:
+            t_data = bhash_res[req.target_language]
+            # Ensure it didn't just return untranslated source english
+            if t_data.get("title") and (t_data["title"] != req.title or not req.title):
+                story_trans = ""
+                care_trans = ""
+                if req.craft_story:
+                    try:
+                        story_trans = bhashini_client.translate_text(req.craft_story, source_lang="en", target_lang=req.target_language)
+                    except Exception:
+                        story_trans = req.craft_story
+                if req.care_instructions:
+                    try:
+                        care_trans = bhashini_client.translate_text(req.care_instructions, source_lang="en", target_lang=req.target_language)
+                    except Exception:
+                        care_trans = req.care_instructions
+
+                return {
+                    "title": t_data.get("title") or req.title or "",
+                    "description": t_data.get("full_description") or t_data.get("short_description") or req.description or "",
+                    "short_description": t_data.get("short_description") or req.short_description or "",
+                    "full_description": t_data.get("full_description") or req.full_description or req.description or "",
+                    "key_highlights": t_data.get("key_highlights") or req.key_highlights or [],
+                    "craft_story": story_trans or req.craft_story or "",
+                    "care_instructions": care_trans or req.care_instructions or ""
+                }
+    except Exception as bhash_err:
+        logger.warning(f"Bhashini translate route failed: {bhash_err}. Falling back to Gemini...")
+
+    # 2. Fallback to Gemini
     try:
         from ai.gemini_client import generate_content
         import json
@@ -183,14 +234,18 @@ Keep the authentic artisan tone, natural and culturally accurate.
 Return ONLY a valid JSON object with the exact keys:
 {{
   "title": "translated title",
-  "description": "translated description",
+  "short_description": "translated short description",
+  "full_description": "translated full description",
+  "key_highlights": ["translated highlight 1", "translated highlight 2"],
   "craft_story": "translated craft story",
   "care_instructions": "translated care instructions"
 }}
 
 Inputs to translate:
 - title: {req.title or ''}
-- description: {req.description or ''}
+- short_description: {req.short_description or ''}
+- full_description: {req.full_description or req.description or ''}
+- key_highlights: {json.dumps(req.key_highlights or [])}
 - craft_story: {req.craft_story or ''}
 - care_instructions: {req.care_instructions or ''}
 """
@@ -198,16 +253,23 @@ Inputs to translate:
         data = json.loads(res_str)
         return {
             "title": data.get("title") or req.title or "",
-            "description": data.get("description") or req.description or "",
+            "description": data.get("full_description") or data.get("short_description") or data.get("description") or req.description or "",
+            "short_description": data.get("short_description") or req.short_description or "",
+            "full_description": data.get("full_description") or data.get("description") or req.full_description or req.description or "",
+            "key_highlights": data.get("key_highlights") or req.key_highlights or [],
             "craft_story": data.get("craft_story") or req.craft_story or "",
             "care_instructions": data.get("care_instructions") or req.care_instructions or ""
         }
     except Exception as e:
-        print(f"Translation error for {req.target_language}: {e}")
+        logger.error(f"Translation error for {req.target_language}: {e}")
         return {
             "title": req.title or "",
-            "description": req.description or "",
+            "description": req.description or req.full_description or "",
+            "short_description": req.short_description or "",
+            "full_description": req.full_description or req.description or "",
+            "key_highlights": req.key_highlights or [],
             "craft_story": req.craft_story or "",
             "care_instructions": req.care_instructions or ""
         }
+
 

@@ -3,6 +3,9 @@ import api from './api';
 export interface TranslatedProductFields {
   title: string;
   description: string;
+  short_description?: string;
+  full_description?: string;
+  key_highlights?: string[];
   craft_story?: string;
   care_instructions?: string;
 }
@@ -43,7 +46,10 @@ export async function getTranslatedProduct(
     const res = await api.post('/products/translate', {
       product_id: productId,
       title: original.title,
-      description: original.description,
+      description: original.description || original.full_description || '',
+      short_description: original.short_description || '',
+      full_description: original.full_description || original.description || '',
+      key_highlights: original.key_highlights || [],
       craft_story: original.craft_story || '',
       care_instructions: original.care_instructions || '',
       target_language: targetLang,
@@ -52,7 +58,10 @@ export async function getTranslatedProduct(
 
     const result: TranslatedProductFields = {
       title: res.data?.title || original.title,
-      description: res.data?.description || original.description,
+      description: res.data?.description || res.data?.full_description || original.description,
+      short_description: res.data?.short_description || original.short_description,
+      full_description: res.data?.full_description || res.data?.description || original.full_description,
+      key_highlights: res.data?.key_highlights || original.key_highlights,
       craft_story: res.data?.craft_story || original.craft_story,
       care_instructions: res.data?.care_instructions || original.care_instructions
     };

@@ -66,6 +66,9 @@ interface ProductWizardState {
           short_description: string; 
           full_description: string; 
           key_highlights: string[]; 
+          description?: string;
+          product_story?: string;
+          care_instructions?: string;
       }> | null;
       quality_validation?: { 
           passed: boolean; 
