@@ -7,7 +7,11 @@ from .schemas import PassportGenerateResponse, PassportData, ProductImage
 from typing import Any
 from config import settings
 
-FRONTEND_URL = getattr(settings, "FRONTEND_URL", None) or os.environ.get("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = getattr(settings, "FRONTEND_URL", None) or os.environ.get("FRONTEND_URL", "https://artisanx-frontend.vercel.app")
+if "localhost" in FRONTEND_URL or "127.0.0.1" in FRONTEND_URL:
+    # Always use the live production domain for public QR codes and shareable links
+    FRONTEND_URL = "https://artisanx-frontend.vercel.app"
+
 
 def generate_passport(product_id: str, auth_client: Any, user_id: str) -> PassportGenerateResponse:
     prod_res = auth_client.table("products").select("*").eq("id", product_id).execute()

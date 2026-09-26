@@ -37,6 +37,16 @@ export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl,
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  const cleanShareUrl = shareableUrl && !shareableUrl.includes('localhost') && !shareableUrl.includes('127.0.0.1')
+    ? shareableUrl
+    : typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+      ? window.location.href
+      : (shareableUrl?.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://artisanx-frontend.vercel.app') || 'https://artisanx-frontend.vercel.app');
+
+  const cleanQrCodeUrl = qrCodeUrl && !qrCodeUrl.includes('localhost') && !qrCodeUrl.includes('127.0.0.1')
+    ? qrCodeUrl
+    : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=9A4023&data=${encodeURIComponent(cleanShareUrl)}`;
+
   const images = passportData.images?.length > 0 ? passportData.images : [{ image_url: 'https://via.placeholder.com/400x400?text=No+Image', is_main: true }];
 
   const handleShare = async () => {
@@ -44,14 +54,14 @@ export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl,
       try {
         await navigator.share({
           title: passportData.title,
-          text: `Check out ${passportData.title} by ${passportData.artisan_name}`,
-          url: shareableUrl,
+          text: `Check out ${passportData.title} by ${passportData.artisan_name} - Verified Digital Craft Passport`,
+          url: cleanShareUrl,
         });
       } catch (err) {
         console.error('Share failed', err);
       }
     } else {
-      navigator.clipboard.writeText(shareableUrl);
+      navigator.clipboard.writeText(cleanShareUrl);
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
     }
@@ -190,7 +200,7 @@ export default function ProductPassport({ passportData, qrCodeUrl, shareableUrl,
       <div className="mt-4 bg-surface p-5 shadow-sm text-center text-on-surface">
         <h2 className="text-sm font-bold tracking-wider text-on-surface-variant uppercase mb-4">{t('passport.authenticity', 'Authenticity Passport')}</h2>
         <div className="inline-block p-4 bg-surface border-2 border-outline-variant rounded-2xl shadow-sm mb-3">
-          <img src={qrCodeUrl} alt="Product QR Code" className="w-40 h-40" />
+          <img src={cleanQrCodeUrl} alt="Product QR Code" className="w-40 h-40 object-contain mx-auto" />
         </div>
         <p className="text-xs text-on-surface-variant max-w-[250px] mx-auto">
           {t('passport.scan_desc', 'Scan this QR code to verify the authenticity and origin of this handcrafted product.')}
