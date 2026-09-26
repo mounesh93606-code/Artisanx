@@ -5,6 +5,7 @@ import axios from 'axios';
 import ProductPassport from '../components/product/ProductPassport';
 import EnquiryForm from '../components/buyer/EnquiryForm';
 import { useTranslation } from 'react-i18next';
+import { getTranslatedProduct, type TranslatedProductFields } from '../lib/productTranslation';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -18,6 +19,7 @@ export default function PublicProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [showEnquiryForm, setShowEnquiryForm] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<TranslatedProductFields | null>(null);
 
   useEffect(() => {
     async function fetchDetail() {
@@ -35,6 +37,37 @@ export default function PublicProductPage() {
       fetchDetail();
     }
   }, [productId]);
+
+  // Dynamic translation effect when language changes
+  useEffect(() => {
+    if (!detail?.product) return;
+    const prod = detail.product;
+    const art = detail.artisan;
+
+    if (currentLang === 'en') {
+      setTranslatedContent(null);
+      return;
+    }
+
+    if (prod.translations?.[currentLang]?.title && prod.translations?.[currentLang]?.description) {
+      setTranslatedContent(prod.translations[currentLang]);
+      return;
+    }
+
+    let isMounted = true;
+    getTranslatedProduct(prod.id, {
+      title: prod.title || '',
+      description: prod.description || '',
+      craft_story: art?.craft_story || '',
+      care_instructions: prod.care_instructions || ''
+    }, currentLang).then(res => {
+      if (isMounted) {
+        setTranslatedContent(res);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, [detail, currentLang]);
 
   const handleEnquiry = () => {
       setShowEnquiryForm(true);
@@ -58,8 +91,9 @@ export default function PublicProductPage() {
 
   const { product, artisan, images, passport } = detail;
   const mainImages = images.length > 0 ? images : [{ image_url: '' }];
-  const displayTitle = product?.translations?.[currentLang]?.title || product?.title || 'Product';
-  const displayDescription = product?.translations?.[currentLang]?.description || product?.description || '';
+  const displayTitle = translatedContent?.title || product?.translations?.[currentLang]?.title || product?.title || 'Product';
+  const displayDescription = translatedContent?.description || product?.translations?.[currentLang]?.description || product?.description || '';
+  const displayCraftStory = translatedContent?.craft_story || artisan?.craft_story;
 
   return (
     <div className="w-full relative pb-24">
@@ -163,8 +197,8 @@ export default function PublicProductPage() {
                           <div className="text-xs text-on-secondary-container font-bold mt-1 bg-secondary-container px-2 py-0.5 rounded w-max">{artisan.craft_type || t('auth.artisan')}</div>
                       </div>
                   </div>
-                  {artisan.craft_story && (
-                      <p className="text-sm text-stone-600 leading-relaxed italic border-l-2 border-stone-200 pl-3">"{artisan.craft_story}"</p>
+                  {displayCraftStory && (
+                      <p className="text-sm text-stone-600 leading-relaxed italic border-l-2 border-stone-200 pl-3">"{displayCraftStory}"</p>
                   )}
               </div>
           )}
@@ -173,7 +207,12 @@ export default function PublicProductPage() {
               <div className="mt-8">
                   <h3 className="font-bold text-stone-800 text-lg mb-4">Product Passport</h3>
                   <ProductPassport 
-                      passportData={passport.passport_data} 
+                      passportData={{
+                          ...passport.passport_data,
+                          title: displayTitle,
+                          artisan_story: displayCraftStory || passport.passport_data?.artisan_story,
+                          care_instructions: translatedContent?.care_instructions || passport.passport_data?.care_instructions
+                      }} 
                       qrCodeUrl={passport.qr_code_url} 
                       shareableUrl={passport.shareable_url} 
                       onEnquire={handleEnquiry}

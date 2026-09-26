@@ -143,6 +143,71 @@ def route_duplicate_product(product_id: str, current_user: Any = Depends(get_cur
             del v["id"]
             del v["created_at"]
             v["product_id"] = new_id
-        auth_client.table("product_variants").insert(vars).execute()
-        
     return {"status": "success", "new_product_id": new_id}
+
+from pydantic import BaseModel
+from typing import Optional
+
+class ProductTranslateRequest(BaseModel):
+    product_id: Optional[str] = None
+    title: Optional[str] = ""
+    description: Optional[str] = ""
+    craft_story: Optional[str] = ""
+    care_instructions: Optional[str] = ""
+    target_language: str = "hi"
+    source_language: str = "en"
+
+@router.post("/translate")
+def route_translate_product(req: ProductTranslateRequest):
+    if not req.target_language or req.target_language == "en":
+        return {
+            "title": req.title or "",
+            "description": req.description or "",
+            "craft_story": req.craft_story or "",
+            "care_instructions": req.care_instructions or ""
+        }
+    
+    lang_names = {
+        "hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada",
+        "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi", "ur": "Urdu", "en": "English"
+    }
+    target_name = lang_names.get(req.target_language, req.target_language)
+    
+    try:
+        from ai.gemini_client import generate_content
+        import json
+        
+        prompt = f"""You are a professional multilingual translator for Indian handicrafts and artisan products.
+Translate the following fields into {target_name} ({req.target_language}).
+Keep the authentic artisan tone, natural and culturally accurate.
+Return ONLY a valid JSON object with the exact keys:
+{{
+  "title": "translated title",
+  "description": "translated description",
+  "craft_story": "translated craft story",
+  "care_instructions": "translated care instructions"
+}}
+
+Inputs to translate:
+- title: {req.title or ''}
+- description: {req.description or ''}
+- craft_story: {req.craft_story or ''}
+- care_instructions: {req.care_instructions or ''}
+"""
+        res_str = generate_content(prompt, mime_type="application/json")
+        data = json.loads(res_str)
+        return {
+            "title": data.get("title") or req.title or "",
+            "description": data.get("description") or req.description or "",
+            "craft_story": data.get("craft_story") or req.craft_story or "",
+            "care_instructions": data.get("care_instructions") or req.care_instructions or ""
+        }
+    except Exception as e:
+        print(f"Translation error for {req.target_language}: {e}")
+        return {
+            "title": req.title or "",
+            "description": req.description or "",
+            "craft_story": req.craft_story or "",
+            "care_instructions": req.care_instructions or ""
+        }
+
