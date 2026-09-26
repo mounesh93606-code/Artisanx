@@ -4,14 +4,12 @@ import {
   ShieldCheck, Mail, Sparkles, MapPin, 
   CheckCircle2, Share2, Check 
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
 import ProductPassport from '../components/product/ProductPassport';
 import EnquiryForm from '../components/buyer/EnquiryForm';
 import { LanguageSwitcher } from '../components/layout/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { getTranslatedProduct, type TranslatedProductFields } from '../lib/productTranslation';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function PublicProductPage() {
   const { i18n } = useTranslation();
@@ -28,7 +26,7 @@ export default function PublicProductPage() {
   useEffect(() => {
     async function fetchDetail() {
       try {
-        const response = await axios.get(`${API_URL}/products/catalogue/detail/${productId}`);
+        const response = await api.get(`/products/catalogue/detail/${productId}`);
         setDetail(response.data);
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Product not found or unavailable.');

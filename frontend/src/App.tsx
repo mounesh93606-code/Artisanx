@@ -62,6 +62,7 @@ import { PublicLayout } from './components/layout/PublicLayout';
 
 const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole?: string }) => {
   const { t } = useTranslation();
+  const location = useLocation();
 
   const { isAuthenticated, user, isLoading } = useAuthStore();
   
@@ -70,6 +71,11 @@ const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, 
   }
   
   if (!isAuthenticated) {
+    // If a guest/friend opens any product link (e.g. /buyer/product/123), route to public product passport instead of login!
+    const productMatch = location.pathname.match(/\/(?:buyer\/)?products?\/([a-zA-Z0-9_-]+)/i);
+    if (productMatch) {
+      return <Navigate to={`/product/${productMatch[1]}`} replace />;
+    }
     return <Navigate to="/login" replace />;
   }
   
@@ -263,6 +269,9 @@ function App() {
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
           <Route path="/product/:productId" element={<PublicProductPage />} />
+          <Route path="/products/:productId" element={<PublicProductPage />} />
+          <Route path="/passport/:productId" element={<PublicProductPage />} />
+          <Route path="/p/:productId" element={<PublicProductPage />} />
         </Route>
 
         <Route path="/language" element={<LanguageSelectionPage />} />
