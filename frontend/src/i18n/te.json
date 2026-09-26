@@ -310,7 +310,24 @@
     "no_enquiries": "ఇటీవలి విచారణలు లేవు",
     "next_step_desc": "మరింత మంది కొనుగోలుదారులను ఆకర్షించడానికి మీ తాజా చేతిపనుల ఫోటోలను అప్‌లోడ్ చేయండి!",
     "greeting_prefix": "ఈ రోజు మీరు ఏమి చేయాలనుకుంటున్నారు?",
-    "see_all": "అన్నీ చూడండి"
+    "see_all": "అన్నీ చూడండి",
+    "total_order_value": "మొత్తం ఆర్డర్ విలువ",
+    "products": "ఉత్పత్తులు",
+    "published": "ప్రచురించబడింది",
+    "new_enquiries": "కొత్త విచారణలు",
+    "pending_quotes": "పెండింగ్ కొటేషన్లు",
+    "active_orders": "యాక్టివ్ ఆర్డర్లు",
+    "completed": "పూర్తయింది",
+    "messages": "సందేశాలు",
+    "reviews": "సమీక్షలు",
+    "analytics": "విశ్లేషణలు",
+    "performance_insights": "పనితీరు అంతర్దృష్టులు",
+    "completion_rate": "పూర్తి చేసే రేటు",
+    "cancellation_rate": "రద్దు రేటు",
+    "on_time_rate": "సమయపాలన రేటు",
+    "recent_activity": "ఇటీవలి కార్యకలాపాలు",
+    "no_recent_activity": "ఇటీవలి కార్యకలాపాలు లేవు",
+    "order_updated": "ఆర్డర్ {{id}} నవీకరించబడింది"
   },
   "nav": {
     "home": "హోమ్",
@@ -458,5 +475,25 @@
     "subtotal": "ఉప మొత్తం",
     "date": "తేదీ",
     "transaction_ref": "లావాదేవీ సంఖ్య"
+  },
+  "dashboard": {
+    "total_order_value": "మొత్తం ఆర్డర్ విలువ",
+    "products": "ఉత్పత్తులు",
+    "published": "ప్రచురించబడింది",
+    "new_enquiries": "కొత్త విచారణలు",
+    "pending_quotes": "పెండింగ్ కొటేషన్లు",
+    "active_orders": "యాక్టివ్ ఆర్డర్లు",
+    "completed": "పూర్తయింది",
+    "messages": "సందేశాలు",
+    "reviews": "సమీక్షలు",
+    "analytics": "విశ్లేషణలు",
+    "performance_insights": "పనితీరు అంతర్దృష్టులు",
+    "completion_rate": "పూర్తి చేసే రేటు",
+    "cancellation_rate": "రద్దు రేటు",
+    "on_time_rate": "సమయపాలన రేటు",
+    "recent_activity": "ఇటీవలి కార్యకలాపాలు",
+    "see_all": "అన్నీ చూడండి",
+    "no_recent_activity": "ఇటీవలి కార్యకలాపాలు లేవు",
+    "order_updated": "ఆర్డర్ {{id}} నవీకరించబడింది"
   }
 }

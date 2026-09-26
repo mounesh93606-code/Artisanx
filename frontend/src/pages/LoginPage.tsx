@@ -33,6 +33,7 @@ const LoginPage: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [timer, setTimer] = useState(0);
 
+
   // Email state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,6 +72,7 @@ const LoginPage: React.FC = () => {
       navigate(`/${user.role}`);
     }
   }, [isAuthenticated, user, navigate]);
+
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

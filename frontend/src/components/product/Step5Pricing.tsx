@@ -603,11 +603,18 @@ const Step5Pricing = ({ t, isRTL }: { t: any, isRTL: boolean }) => {
             </div>
 
             {/* Navigation buttons */}
-            <div className="mt-4 flex gap-4">
-                <Button variant="ghost" onClick={() => setStep(4)} className="px-6">{t.back}</Button>
+            <div className="mt-4 flex gap-3">
+                <Button variant="ghost" onClick={() => setStep(4)} className="px-4">{t.back || "Back"}</Button>
+                <Button 
+                    variant="outline"
+                    onClick={() => setStep(6)}
+                    className="px-5 border-outline-variant/60 text-on-surface hover:bg-surface-container"
+                >
+                    {t.skip || "Skip"}
+                </Button>
                 <Button 
                     onClick={async () => { await saveDraft(); setStep(6); }}
-                    fullWidth
+                    className="flex-1"
                     disabled={!pricingData.finalPrice || pricingData.finalPrice <= 0}
                 >
                     {t.nextInventory || 'Next: Inventory'} <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>

@@ -13,13 +13,21 @@ const isPrivateIp = (host: string): boolean => {
 
 export const getApiUrl = (): string => {
     if (typeof window !== 'undefined') {
+        const isNative = (window as any)?.Capacitor?.isNativePlatform?.();
         const customUrl = localStorage.getItem('artisanx_api_url');
         const isHttps = window.location.protocol === 'https:';
 
+        // For native mobile app, default to local backend (via adb reverse or LAN)
+        if (isNative) {
+            if (customUrl && !customUrl.includes('onrender.com')) {
+                return customUrl;
+            }
+            return 'http://localhost:8000';
+        }
+
         // Check stored custom URL: prevent mixed-content blocking on HTTPS web browsers
         if (customUrl) {
-            const isNative = typeof window !== 'undefined' && (window as any)?.Capacitor?.isNativePlatform?.();
-            if (isHttps && customUrl.startsWith('http://') && !isNative) {
+            if (isHttps && customUrl.startsWith('http://')) {
                 localStorage.removeItem('artisanx_api_url');
             } else {
                 return customUrl;

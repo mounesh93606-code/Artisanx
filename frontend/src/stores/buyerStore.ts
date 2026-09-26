@@ -7,7 +7,8 @@ interface BuyerState {
     fetchSavedProducts: () => Promise<void>;
     toggleSavedProduct: (product: any) => Promise<void>;
     addRecentlyViewed: (product: any) => void;
-    loadRecentlyViewed: () => void;
+    loadRecentlyViewed: () => Promise<void>;
+    clearRecentlyViewed: () => void;
 }
 
 export const useBuyerStore = create<BuyerState>((set, get) => ({
@@ -79,14 +80,38 @@ export const useBuyerStore = create<BuyerState>((set, get) => ({
         }
     },
     
-    loadRecentlyViewed: () => {
+    loadRecentlyViewed: async () => {
         try {
             const stored = localStorage.getItem('buyer_recently_viewed');
             if (stored) {
-                set({ recentlyViewed: JSON.parse(stored) });
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    try {
+                        const res = await api.get('/products/catalogue/list', { params: { per_page: 50 } });
+                        const activeIds = new Set((res.data?.items || []).map((p: any) => p.id));
+                        const valid = parsed.filter((p: any) => activeIds.has(p.id));
+                        set({ recentlyViewed: valid });
+                        localStorage.setItem('buyer_recently_viewed', JSON.stringify(valid));
+                    } catch {
+                        set({ recentlyViewed: [] });
+                    }
+                } else {
+                    set({ recentlyViewed: [] });
+                }
+            } else {
+                set({ recentlyViewed: [] });
             }
         } catch (e) {
             console.error('Local storage parse error', e);
+            set({ recentlyViewed: [] });
+        }
+    },
+    clearRecentlyViewed: () => {
+        set({ recentlyViewed: [] });
+        try {
+            localStorage.removeItem('buyer_recently_viewed');
+        } catch (e) {
+            console.error(e);
         }
     }
 }));

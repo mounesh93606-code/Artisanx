@@ -651,11 +651,18 @@ const Step3ReviewAI = ({ t }: { t: any }) => {
                 </div>
             </div>
 
-            <div className="mt-4 flex gap-4">
-                <Button variant="ghost" onClick={() => setStep(2)} className="px-6">{t.back}</Button>
+            <div className="mt-4 flex gap-3">
+                <Button variant="ghost" onClick={() => setStep(2)} className="px-4">{t.back || "Back"}</Button>
+                <Button 
+                    variant="outline"
+                    onClick={() => setStep(4)}
+                    className="px-5 border-outline-variant/60 text-on-surface hover:bg-surface-container"
+                >
+                    {t.skip || "Skip"}
+                </Button>
                 <Button 
                     onClick={async () => { await saveDraft(); setStep(4); }}
-                    fullWidth
+                    className="flex-1"
                 >
                     <span>Approve & Continue</span>
                     <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>

@@ -310,7 +310,24 @@
     "no_enquiries": "സമീപകാല അന്വേഷണങ്ങളൊന്നുമില്ല",
     "next_step_desc": "കൂടുതൽ വാങ്ങുന്നവരെ ആകർഷിക്കാൻ നിങ്ങളുടെ കരകൗശല ഫോട്ടോകൾ അപ്‌ലോഡ് ചെയ്യുക!",
     "greeting_prefix": "ഇന്ന് നിങ്ങൾ എന്താണ് ചെയ്യാൻ ആഗ്രഹിക്കുന്നത്?",
-    "see_all": "എല്ലാം കാണുക"
+    "see_all": "എല്ലാം കാണുക",
+    "total_order_value": "ആകെ ഓർഡർ മൂല്യം",
+    "products": "ഉൽപ്പന്നങ്ങൾ",
+    "published": "പ്രസിദ്ധീകരിച്ചത്",
+    "new_enquiries": "പുതിയ അന്വേഷണങ്ങൾ",
+    "pending_quotes": "തീർപ്പുകൽപ്പിക്കാത്ത വിലവിവരങ്ങൾ",
+    "active_orders": "സജീവ ഓർഡറുകൾ",
+    "completed": "പൂർത്തിയായി",
+    "messages": "സന്ദേശങ്ങൾ",
+    "reviews": "അവലോകനങ്ങൾ",
+    "analytics": "വിശകലനങ്ങൾ",
+    "performance_insights": "പ്രകടന സ്ഥിതിവിവരക്കണക്കുകൾ",
+    "completion_rate": "പൂർത്തീകരണ നിരക്ക്",
+    "cancellation_rate": "റദ്ദാക്കൽ നിരക്ക്",
+    "on_time_rate": "കൃത്യസമയ നിരക്ക്",
+    "recent_activity": "സമീപകാല പ്രവർത്തനം",
+    "no_recent_activity": "സമീപകാല പ്രവർത്തനങ്ങളൊന്നുമില്ല",
+    "order_updated": "ഓർഡർ {{id}} പുതുക്കി"
   },
   "nav": {
     "home": "ഹോം",
@@ -458,5 +475,25 @@
     "subtotal": "ഉപ ആകെ",
     "date": "തീയതി",
     "transaction_ref": "ഇടപാട് റഫറൻസ്"
+  },
+  "dashboard": {
+    "total_order_value": "ആകെ ഓർഡർ മൂല്യം",
+    "products": "ഉൽപ്പന്നങ്ങൾ",
+    "published": "പ്രസിദ്ധീകരിച്ചത്",
+    "new_enquiries": "പുതിയ അന്വേഷണങ്ങൾ",
+    "pending_quotes": "തീർപ്പുകൽപ്പിക്കാത്ത വിലവിവരങ്ങൾ",
+    "active_orders": "സജീവ ഓർഡറുകൾ",
+    "completed": "പൂർത്തിയായി",
+    "messages": "സന്ദേശങ്ങൾ",
+    "reviews": "അവലോകനങ്ങൾ",
+    "analytics": "വിശകലനങ്ങൾ",
+    "performance_insights": "പ്രകടന സ്ഥിതിവിവരക്കണക്കുകൾ",
+    "completion_rate": "പൂർത്തീകരണ നിരക്ക്",
+    "cancellation_rate": "റദ്ദാക്കൽ നിരക്ക്",
+    "on_time_rate": "കൃത്യസമയ നിരക്ക്",
+    "recent_activity": "സമീപകാല പ്രവർത്തനം",
+    "see_all": "എല്ലാം കാണുക",
+    "no_recent_activity": "സമീപകാല പ്രവർത്തനങ്ങളൊന്നുമില്ല",
+    "order_updated": "ഓർഡർ {{id}} പുതുക്കി"
   }
 }

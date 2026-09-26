@@ -108,7 +108,7 @@ export default function ArtisanHome() {
         <section className="grid grid-cols-2 gap-3">
           <div className="col-span-2 bg-primary-fixed/20 border border-primary/20 rounded-xl p-4 flex items-center justify-between shadow-sm cursor-pointer" onClick={() => navigate('/artisan/orders')}>
             <div>
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Total Order Value</p>
+              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">{t('dashboard.total_order_value')}</p>
               <p className="text-2xl font-black text-primary">₹{metrics.orders.total_value.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center">
@@ -118,33 +118,33 @@ export default function ArtisanHome() {
           
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/artisan/products')}>
             <span className="text-xl font-black text-on-surface leading-none">{metrics.total_products}</span>
-            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">Products</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">{t('dashboard.products')}</span>
           </div>
           
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/artisan/products')}>
             <span className="text-xl font-black text-tertiary leading-none">{metrics.published_products}</span>
-            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">Published</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">{t('dashboard.published')}</span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer relative" onClick={() => navigate('/artisan/enquiries')}>
             {metrics.new_enquiries > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-error ring-2 ring-surface-container-lowest animate-pulse"></span>}
             <span className="text-xl font-black text-secondary leading-none">{metrics.new_enquiries}</span>
-            <span className="text-[11px] font-semibold text-on-surface mt-1.5 uppercase">New Enquiries</span>
+            <span className="text-[11px] font-semibold text-on-surface mt-1.5 uppercase">{t('dashboard.new_enquiries')}</span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/artisan/quotations')}>
             <span className="text-xl font-black text-on-surface leading-none">{metrics.pending_quotations}</span>
-            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">Pending Quotes</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">{t('dashboard.pending_quotes')}</span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/artisan/orders')}>
             <span className="text-xl font-black text-primary leading-none">{metrics.orders.active}</span>
-            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">Active Orders</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">{t('dashboard.active_orders')}</span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/artisan/orders')}>
             <span className="text-xl font-black text-on-surface-variant leading-none">{metrics.orders.completed}</span>
-            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">Completed</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant mt-1.5 uppercase">{t('dashboard.completed')}</span>
           </div>
         </section>
 
@@ -154,39 +154,39 @@ export default function ArtisanHome() {
             <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-2">
               <span className="material-symbols-outlined">forum</span>
             </div>
-            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">Messages</span>
+            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">{t('dashboard.messages')}</span>
           </div>
           
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer hover:bg-surface-container-low transition-colors" onClick={() => navigate('/artisan/reviews')}>
             <div className="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center mb-2">
               <span className="material-symbols-outlined">star</span>
             </div>
-            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">Reviews</span>
+            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">{t('dashboard.reviews')}</span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 shadow-sm flex flex-col items-center text-center cursor-pointer hover:bg-surface-container-low transition-colors" onClick={() => navigate('/artisan/analytics')}>
             <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center mb-2">
               <span className="material-symbols-outlined">insights</span>
             </div>
-            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">Analytics</span>
+            <span className="text-[11px] font-bold text-on-surface uppercase tracking-tight">{t('dashboard.analytics')}</span>
           </div>
         </section>
 
         {/* Performance Rates Widget */}
         <section className="bg-surface rounded-xl border border-outline-variant p-4 shadow-sm">
-          <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">Performance Insights</h3>
+          <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">{t('dashboard.performance_insights')}</h3>
           <div className="grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center justify-center">
               <span className="text-lg font-black text-primary">{metrics.orders.completion_rate}%</span>
-              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">Completion Rate</span>
+              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">{t('dashboard.completion_rate')}</span>
             </div>
             <div className="flex flex-col items-center justify-center border-l border-outline-variant/50">
               <span className="text-lg font-black text-error">{metrics.orders.cancellation_rate}%</span>
-              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">Cancellation Rate</span>
+              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">{t('dashboard.cancellation_rate')}</span>
             </div>
             <div className="flex flex-col items-center justify-center border-l border-outline-variant/50">
               <span className="text-lg font-black text-tertiary">{metrics.orders.on_time_rate}%</span>
-              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">On-Time Rate</span>
+              <span className="text-[10px] font-semibold text-on-surface-variant mt-1 uppercase text-center leading-tight">{t('dashboard.on_time_rate')}</span>
             </div>
           </div>
         </section>
@@ -196,10 +196,10 @@ export default function ArtisanHome() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-primary text-xl">history</span>
-              <span className="font-bold text-on-surface">Recent Activity</span>
+              <span className="font-bold text-on-surface">{t('dashboard.recent_activity')}</span>
             </div>
             <button onClick={() => navigate('/artisan/orders')} className="text-xs font-bold text-primary hover:underline">
-              See all
+              {t('dashboard.see_all')}
             </button>
           </div>
           
@@ -212,7 +212,7 @@ export default function ArtisanHome() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-on-surface text-sm truncate">
-                      Order {activity.orders.display_id} updated
+                      {t('dashboard.order_updated')} ({activity.orders.display_id})
                     </p>
                     <p className="text-xs font-medium text-on-surface-variant truncate mt-0.5">
                       {activity.from_status ? `${activity.from_status} → ` : ''}{activity.to_status}
@@ -222,7 +222,7 @@ export default function ArtisanHome() {
               ))
             ) : (
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm flex items-center justify-center">
-                <p className="text-xs font-medium text-on-surface-variant">No recent activity</p>
+                <p className="text-xs font-medium text-on-surface-variant">{t('dashboard.no_recent_activity')}</p>
               </div>
             )}
           </div>

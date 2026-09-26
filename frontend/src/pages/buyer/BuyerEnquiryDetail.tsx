@@ -135,15 +135,16 @@ export default function BuyerEnquiryDetail() {
   const image = product?.images?.[0]?.image_url;
   const quotation = enquiry.quotation;
   const rev = quotation?.current_revision || quotation?.latest_revision || quotation?.revisions?.[0];
-  const isQuoteSent = enquiry.status === 'quote_sent' || quotation?.status === 'sent';
-  const isAccepted = enquiry.status === 'accepted' || quotation?.status === 'accepted';
-  const isChangesRequested = enquiry.status === 'changes_requested' || quotation?.status === 'changes_requested';
-  const isRejected = enquiry.status === 'rejected' || quotation?.status === 'rejected';
+  const isClosed = enquiry.status === 'closed' || enquiry.status === 'ordered' || enquiry.status === 'completed' || enquiry.is_consumed;
+  const isQuoteSent = !isClosed && (enquiry.status === 'quote_sent' || quotation?.status === 'sent');
+  const isAccepted = !isClosed && (enquiry.status === 'accepted' || quotation?.status === 'accepted');
+  const isChangesRequested = !isClosed && (enquiry.status === 'changes_requested' || quotation?.status === 'changes_requested');
+  const isRejected = !isClosed && (enquiry.status === 'rejected' || quotation?.status === 'rejected');
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-28">
+    <div className="max-w-3xl mx-auto px-4 pt-14 pb-28 sm:p-6 space-y-5">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-2">
         <button 
           onClick={() => navigate('/buyer/enquiries')} 
           className="flex items-center text-stone-600 hover:text-primary transition-colors text-sm font-semibold"
@@ -165,6 +166,12 @@ export default function BuyerEnquiryDetail() {
         </div>
 
         <div>
+          {isClosed && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              Order Placed & Paid
+            </span>
+          )}
           {isQuoteSent && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
@@ -189,7 +196,7 @@ export default function BuyerEnquiryDetail() {
               Declined
             </span>
           )}
-          {!isQuoteSent && !isAccepted && !isChangesRequested && !isRejected && (
+          {!isClosed && !isQuoteSent && !isAccepted && !isChangesRequested && !isRejected && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-700 border border-stone-200">
               <Clock className="w-3.5 h-3.5 text-stone-400" />
               {enquiry.status === 'responded' ? 'Responded' : enquiry.status === 'viewed' ? 'Seen by Artisan' : 'Pending Response'}
@@ -197,6 +204,37 @@ export default function BuyerEnquiryDetail() {
           )}
         </div>
       </div>
+
+      {/* Closed / Completed Order Callout Banner */}
+      {isClosed && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-emerald-900 text-sm">Enquiry Converted & Closed</h3>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                This discussion resulted in a confirmed order. If you want to order again, you can visit the product page.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-stretch sm:self-auto">
+            <button
+              onClick={() => navigate('/buyer/orders')}
+              className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors text-center"
+            >
+              View My Orders
+            </button>
+            <button
+              onClick={() => navigate(`/buyer/product/${enquiry.product_id}`)}
+              className="flex-1 sm:flex-none px-4 py-2 bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100/50 font-bold text-xs rounded-xl transition-colors text-center"
+            >
+              Product Page
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================================= */}
       {/* PROMINENT QUOTATION CARD (When artisan has sent a quotation) */}

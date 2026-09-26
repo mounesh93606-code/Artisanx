@@ -114,15 +114,20 @@ const BackButtonHandler: React.FC = () => {
   return null;
 };
 
+const handledLaunchUrls = new Set<string>();
+
 const AppUrlListener: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let listenerHandle: any = null;
+    let appUrlHandle: any = null;
 
     const handleUrl = (rawUrl: string) => {
+      if (!rawUrl || handledLaunchUrls.has(rawUrl)) return;
+      handledLaunchUrls.add(rawUrl);
+
       try {
         // Automatically close in-app browser if open
         Browser.close().catch(() => {});
@@ -133,11 +138,15 @@ const AppUrlListener: React.FC = () => {
         const path = parsed.pathname;
         const search = parsed.search;
 
-        if (path.includes('payment/status')) {
-          navigate(`/buyer/payment/status${search}`);
-        } else if (path.startsWith('/product/')) {
-          navigate(path);
-        } else if (path.startsWith('/buyer/') || path.startsWith('/artisan/')) {
+        if (path.includes('payment/status') || normalized.includes('payment/status')) {
+          const orderId = parsed.searchParams.get('order_id') || '';
+          const productId = parsed.searchParams.get('product_id') || '';
+          if (productId) {
+            navigate(`/buyer/product/${productId}?order_id=${orderId}`);
+          } else {
+            navigate(`/buyer/payment/status${search}`);
+          }
+        } else if (path.startsWith('/product/') || path.startsWith('/buyer/') || path.startsWith('/artisan/')) {
           navigate(`${path}${search}`);
         } else {
           navigate(`${path}${search}`);
@@ -150,15 +159,17 @@ const AppUrlListener: React.FC = () => {
     const setupListener = async () => {
       try {
         const launchUrl = await CapApp.getLaunchUrl();
-        if (launchUrl && launchUrl.url) {
+        if (launchUrl && launchUrl.url && !handledLaunchUrls.has(launchUrl.url)) {
           handleUrl(launchUrl.url);
         }
       } catch (err) {
         console.warn('Error reading launch URL', err);
       }
 
-      listenerHandle = await CapApp.addListener('appUrlOpen', (event: any) => {
+      appUrlHandle = await CapApp.addListener('appUrlOpen', (event: any) => {
         if (event && event.url) {
+          // Allow appUrlOpen to handle new events even if previous launchUrl was identical
+          handledLaunchUrls.delete(event.url);
           handleUrl(event.url);
         }
       });
@@ -167,8 +178,8 @@ const AppUrlListener: React.FC = () => {
     setupListener();
 
     return () => {
-      if (listenerHandle) {
-        listenerHandle.remove();
+      if (appUrlHandle) {
+        appUrlHandle.remove();
       }
     };
   }, [navigate]);

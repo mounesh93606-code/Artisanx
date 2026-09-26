@@ -64,13 +64,27 @@ def route_create_enquiry(req: EnquiryCreate, current_user: dict = Depends(get_cu
 
 @router.get("/buyer")
 def list_buyer_enquiries(current_user: dict = Depends(get_current_user), token: str = Depends(get_token)) -> dict:
+    from database import get_service_client
+    service_client = get_service_client()
     client = get_authenticated_client(token)
     
     res = client.table("buyer_enquiries").select(
-        "*, products(title, images:product_images(image_url)), artisan:users!artisan_id(display_name)"
+        "*, products(title, images:product_images(image_url)), artisan:users!artisan_id(display_name), orders(id, status, payment_status)"
     ).eq("buyer_id", current_user["id"]).order("created_at", desc=True).execute()
     
-    return {"enquiries": res.data}
+    enquiries = res.data or []
+    for enq in enquiries:
+        orders = enq.get("orders") or []
+        is_consumed = any(o.get("payment_status") == "paid" or o.get("status") in ["confirmed", "delivered", "in_production", "shipped"] for o in orders)
+        enq["is_consumed"] = is_consumed or (enq.get("status") in ["closed", "ordered", "completed", "cancelled"])
+        if is_consumed and enq.get("status") not in ["closed", "ordered", "completed"]:
+            try:
+                service_client.table("buyer_enquiries").update({"status": "closed"}).eq("id", enq["id"]).execute()
+                enq["status"] = "closed"
+            except Exception:
+                pass
+
+    return {"enquiries": enquiries}
 
 @router.get("/artisan")
 def list_artisan_enquiries(current_user: dict = Depends(get_current_user), token: str = Depends(get_token)) -> dict:

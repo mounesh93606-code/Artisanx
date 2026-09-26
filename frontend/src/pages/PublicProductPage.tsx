@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function PublicProductPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'en';
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<any>(null);
@@ -57,12 +58,14 @@ export default function PublicProductPage() {
 
   const { product, artisan, images, passport } = detail;
   const mainImages = images.length > 0 ? images : [{ image_url: '' }];
+  const displayTitle = product?.translations?.[currentLang]?.title || product?.title || 'Product';
+  const displayDescription = product?.translations?.[currentLang]?.description || product?.description || '';
 
   return (
     <div className="w-full relative pb-24">
       {/* Top Nav */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm">
+      <div className="absolute top-4 left-4 z-10 flex gap-2 pt-safe">
+          <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm active:scale-95 transition-transform" aria-label="Back">
               <ArrowLeft className="w-5 h-5" />
           </button>
       </div>
@@ -70,7 +73,7 @@ export default function PublicProductPage() {
       {/* Image Gallery */}
       <div className="w-full aspect-[4/5] bg-stone-200 relative overflow-hidden">
           {mainImages[currentImageIdx].image_url ? (
-              <img src={mainImages[currentImageIdx].image_url} alt="Product" className="w-full h-full object-cover" />
+              <img src={mainImages[currentImageIdx].image_url} alt={displayTitle} className="w-full h-full object-cover" />
           ) : (
               <div className="w-full h-full flex items-center justify-center text-stone-400">No Image</div>
           )}
@@ -90,13 +93,13 @@ export default function PublicProductPage() {
       <div className="px-6 py-6 -mt-6 relative bg-surface-container-lowest rounded-t-3xl text-on-surface">
           <div className="flex justify-between items-start mb-2">
               <div>
-                  <h1 className="text-2xl font-bold text-stone-800">{product.title}</h1>
+                  <h1 className="text-2xl font-bold text-stone-800">{displayTitle}</h1>
                   <span className="text-xs font-bold text-primary uppercase tracking-wide">{product.category}</span>
               </div>
               <div className="text-2xl font-bold text-primary">₹{product.price}</div>
           </div>
           
-          <p className="text-stone-600 mt-4 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+          <p className="text-stone-600 mt-4 leading-relaxed whitespace-pre-wrap">{displayDescription}</p>
           
           <div className="grid grid-cols-2 gap-4 mt-6 border-y border-stone-200 py-6">
               <div className="flex items-center gap-3">

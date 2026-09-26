@@ -56,7 +56,7 @@ def get_artisan_performance(current_user: dict = Depends(get_current_user), toke
     }
 
     try:
-        prod_res = client.table("products").select("id, title, status").eq("artisan_id", artisan_id).execute()
+        prod_res = client.table("products").select("id, title, status").eq("artisan_id", artisan_id).neq("status", "archived").neq("status", "deleted").execute()
         products = {p["id"]: p for p in (prod_res.data or [])}
         product_ids = list(products.keys())
         

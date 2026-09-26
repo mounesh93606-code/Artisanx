@@ -123,13 +123,20 @@ const Step4Materials = ({ t }: { t: any }) => {
                 <span className="text-xl font-bold text-primary">₹{total.toFixed(2)}</span>
             </div>
 
-            <div className="mt-6 flex gap-4">
-                <Button variant="ghost" onClick={() => setStep(3)} className="px-6">{t.back}</Button>
+            <div className="mt-6 flex gap-3">
+                <Button variant="ghost" onClick={() => setStep(3)} className="px-4">{t.back || "Back"}</Button>
+                <Button 
+                    variant="outline"
+                    onClick={() => setStep(5)}
+                    className="px-5 border-outline-variant/60 text-on-surface hover:bg-surface-container"
+                >
+                    {t.skip || "Skip"}
+                </Button>
                 <Button 
                     onClick={async () => { await saveDraft(); setStep(5); }}
-                    fullWidth
+                    className="flex-1"
                 >
-                    {t.next} <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
+                    {t.next || "Next"} <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
                 </Button>
             </div>
         </div>

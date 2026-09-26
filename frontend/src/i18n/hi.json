@@ -314,7 +314,24 @@
     "no_enquiries": "कोई हाल की पूछताछ नहीं",
     "next_step_desc": "अधिक खरीदारों को आकर्षित करने के लिए अपने नवीनतम शिल्प की तस्वीरें अपलोड करें!",
     "greeting_prefix": "आज आप क्या करना चाहेंगे?",
-    "see_all": "सभी देखें"
+    "see_all": "सभी देखें",
+    "total_order_value": "कुल ऑर्डर मूल्य",
+    "products": "उत्पाद",
+    "published": "प्रकाशित",
+    "new_enquiries": "नई पूछताछ",
+    "pending_quotes": "लंबित कोटेशन",
+    "active_orders": "सक्रिय ऑर्डर",
+    "completed": "पूर्ण",
+    "messages": "संदेश",
+    "reviews": "समीक्षाएं",
+    "analytics": "एनालिटिक्स",
+    "performance_insights": "प्रदर्शन अंतर्दृष्टि",
+    "completion_rate": "पूर्णता दर",
+    "cancellation_rate": "रद्दीकरण दर",
+    "on_time_rate": "समय पर दर",
+    "recent_activity": "हाल की गतिविधि",
+    "no_recent_activity": "कोई हालिया गतिविधि नहीं",
+    "order_updated": "ऑर्डर {{id}} अपडेट किया गया"
   },
   "nav": {
     "home": "होम",
@@ -463,5 +480,25 @@
     "subtotal": "उप-कुल",
     "date": "दिनांक",
     "transaction_ref": "लेनदेन संदर्भ"
+  },
+  "dashboard": {
+    "total_order_value": "कुल ऑर्डर मूल्य",
+    "products": "उत्पाद",
+    "published": "प्रकाशित",
+    "new_enquiries": "नई पूछताछ",
+    "pending_quotes": "लंबित कोटेशन",
+    "active_orders": "सक्रिय ऑर्डर",
+    "completed": "पूर्ण",
+    "messages": "संदेश",
+    "reviews": "समीक्षाएं",
+    "analytics": "एनालिटिक्स",
+    "performance_insights": "प्रदर्शन अंतर्दृष्टि",
+    "completion_rate": "पूर्णता दर",
+    "cancellation_rate": "रद्दीकरण दर",
+    "on_time_rate": "समय पर दर",
+    "recent_activity": "हाल की गतिविधि",
+    "see_all": "सभी देखें",
+    "no_recent_activity": "कोई हालिया गतिविधि नहीं",
+    "order_updated": "ऑर्डर {{id}} अपडेट किया गया"
   }
 }

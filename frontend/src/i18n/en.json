@@ -314,7 +314,24 @@
     "no_enquiries": "No recent enquiries",
     "next_step_desc": "Upload photos of your latest craft to attract more buyers!",
     "greeting_prefix": "What would you like to do today?",
-    "see_all": "See all"
+    "see_all": "See all",
+    "total_order_value": "Total Order Value",
+    "products": "Products",
+    "published": "Published",
+    "new_enquiries": "New Enquiries",
+    "pending_quotes": "Pending Quotes",
+    "active_orders": "Active Orders",
+    "completed": "Completed",
+    "messages": "Messages",
+    "reviews": "Reviews",
+    "analytics": "Analytics",
+    "performance_insights": "Performance Insights",
+    "completion_rate": "Completion Rate",
+    "cancellation_rate": "Cancellation Rate",
+    "on_time_rate": "On-Time Rate",
+    "recent_activity": "Recent Activity",
+    "no_recent_activity": "No recent activity",
+    "order_updated": "Order {{id}} updated"
   },
   "nav": {
     "home": "Home",
@@ -465,5 +482,25 @@
     "subtotal": "Subtotal",
     "date": "Date",
     "transaction_ref": "Transaction Ref"
+  },
+  "dashboard": {
+    "total_order_value": "Total Order Value",
+    "products": "Products",
+    "published": "Published",
+    "new_enquiries": "New Enquiries",
+    "pending_quotes": "Pending Quotes",
+    "active_orders": "Active Orders",
+    "completed": "Completed",
+    "messages": "Messages",
+    "reviews": "Reviews",
+    "analytics": "Analytics",
+    "performance_insights": "Performance Insights",
+    "completion_rate": "Completion Rate",
+    "cancellation_rate": "Cancellation Rate",
+    "on_time_rate": "On-Time Rate",
+    "recent_activity": "Recent Activity",
+    "see_all": "See all",
+    "no_recent_activity": "No recent activity",
+    "order_updated": "Order {{id}} updated"
   }
 }

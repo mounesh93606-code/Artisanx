@@ -10,6 +10,8 @@ import bn from './bn.json';
 import mr from './mr.json';
 import ur from './ur.json';
 
+import ml from './ml.json';
+
 const initialLng = localStorage.getItem('language') || 'en';
 if (typeof document !== 'undefined') {
   document.documentElement.dir = initialLng === 'ur' ? 'rtl' : 'ltr';
@@ -23,6 +25,7 @@ i18n.use(initReactI18next).init({
     hi: { translation: hi },
     te: { translation: te },
     kn: { translation: kn },
+    ml: { translation: ml },
     bn: { translation: bn },
     mr: { translation: mr },
     ur: { translation: ur }

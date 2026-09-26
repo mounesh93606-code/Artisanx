@@ -28,8 +28,25 @@ interface AuthState {
     setLanguage: (lang: string) => void;
 }
 
+const getStoredUser = (): User | null => {
+    try {
+        const u = localStorage.getItem('auth_user');
+        return u ? JSON.parse(u) : null;
+    } catch {
+        return null;
+    }
+};
+
+const setStoredUser = (user: User | null) => {
+    if (user) {
+        localStorage.setItem('auth_user', JSON.stringify(user));
+    } else {
+        localStorage.removeItem('auth_user');
+    }
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-    user: null,
+    user: getStoredUser(),
     token: localStorage.getItem('auth_token'),
     isLoading: false,
     isAuthenticated: !!localStorage.getItem('auth_token'),
@@ -60,6 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { data } = await api.post('/auth/verify-otp', { phone, otp: token });
             localStorage.setItem('auth_token', data.access_token);
             if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+            setStoredUser(data.user);
             set({ user: data.user, token: data.access_token, isAuthenticated: true });
         } catch (error: any) {
             set({ error: error.response?.data?.detail || error.message || 'Failed to verify OTP' });
@@ -74,6 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { data } = await api.post('/auth/login', { email, password });
             localStorage.setItem('auth_token', data.access_token);
             if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+            setStoredUser(data.user);
             set({ user: data.user, token: data.access_token, isAuthenticated: true });
         } catch (error: any) {
             set({ error: error.response?.data?.detail || error.message || 'Login failed' });
@@ -90,13 +109,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (data.access_token) {
                 localStorage.setItem('auth_token', data.access_token);
                 if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+                setStoredUser(data.user);
                 set({ user: data.user, token: data.access_token, isAuthenticated: true });
             } else {
+                setStoredUser(data.user);
                 set({ user: data.user });
             }
             
             if (role) {
                 const roleData = await api.post('/auth/set-role', { role });
+                setStoredUser(roleData.data);
                 set({ user: roleData.data });
             }
         } catch (error: any) {
@@ -110,6 +132,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const { data } = await api.post('/auth/set-role', { role });
+            setStoredUser(data);
             set({ user: data });
         } catch (error: any) {
             set({ error: error.response?.data?.detail || error.message || 'Failed to set role' });
@@ -122,7 +145,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const { data } = await api.post('/auth/update-profile', profileData);
-            set((state) => ({ user: { ...state.user, ...data } }));
+            const updated = { ...get().user, ...data };
+            setStoredUser(updated);
+            set({ user: updated });
         } catch (error: any) {
             set({ error: error.response?.data?.detail || error.message || 'Failed to update profile' });
             throw error;
@@ -134,19 +159,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: () => {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('refresh_token');
+        setStoredUser(null);
         set({ user: null, token: null, isAuthenticated: false });
     },
 
     checkAuth: async (isRetry = false) => {
         const token = localStorage.getItem('auth_token');
         if (!token) {
-            set({ isAuthenticated: false });
+            setStoredUser(null);
+            set({ isAuthenticated: false, user: null });
             return;
         }
         
         set({ isLoading: true });
         try {
             const { data } = await api.get('/auth/me');
+            setStoredUser(data);
             set({ user: data, isAuthenticated: true });
         } catch (error: any) {
             if (error.response?.status === 401 && !isRetry) {
@@ -169,6 +197,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             
             localStorage.removeItem('auth_token');
             localStorage.removeItem('refresh_token');
+            setStoredUser(null);
             set({ user: null, token: null, isAuthenticated: false });
         } finally {
             set({ isLoading: false });

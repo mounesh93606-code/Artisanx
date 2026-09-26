@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     CASHFREE_NOTIFY_URL: str = ""
     BACKEND_URL: str = "http://localhost:8000"
 
+    # WhatsApp Cloud API (Meta) - OTP
+    WHATSAPP_ACCESS_TOKEN: str = ""
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_API_VERSION: str = "v20.0"
+    WHATSAPP_OTP_TEMPLATE: str = "artisanx_otp"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

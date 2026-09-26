@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { Star, X } from 'lucide-react';
-import axios from 'axios';
-import { useAuthStore } from '../../stores/authStore';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../../lib/api';
 
 interface ReviewModalProps {
     order: any;
@@ -12,11 +9,8 @@ interface ReviewModalProps {
 }
 
 export default function ReviewModal({ order, onClose, onSuccess }: ReviewModalProps) {
-    const { token } = useAuthStore();
-    
     const [overallRating, setOverallRating] = useState(0);
     const [qualityRating, setQualityRating] = useState(0);
-    const [accuracyRating, setAccuracyRating] = useState(0);
     const [communicationRating, setCommunicationRating] = useState(0);
     const [timelinessRating, setTimelinessRating] = useState(0);
     const [reviewText, setReviewText] = useState("");
@@ -42,23 +36,19 @@ export default function ReviewModal({ order, onClose, onSuccess }: ReviewModalPr
         
         setIsSubmitting(true);
         try {
-            await axios.post(`${API_URL}/reviews/buyer`, {
+            await api.post('/reviews/', {
                 order_id: order.id,
-                product_id: order.product_id,
-                artisan_id: order.artisan_id,
-                overall_rating: overallRating,
-                quality_rating: qualityRating || overallRating,
-                accuracy_rating: accuracyRating || overallRating,
-                communication_rating: communicationRating || overallRating,
-                timeliness_rating: timelinessRating || overallRating,
-                review_text: reviewText
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
+                rating_overall: overallRating,
+                rating_quality: qualityRating || overallRating,
+                rating_communication: communicationRating || overallRating,
+                rating_timeliness: timelinessRating || overallRating,
+                review_text: reviewText.trim() || undefined
             });
+            alert("Thank you! Your review has been submitted.");
             onSuccess();
         } catch (err: any) {
             console.error("Review submission failed", err);
-            alert(err.response?.data?.detail || "Failed to submit review");
+            alert(err.response?.data?.detail || err.message || "Failed to submit review");
         } finally {
             setIsSubmitting(false);
         }
@@ -93,7 +83,6 @@ export default function ReviewModal({ order, onClose, onSuccess }: ReviewModalPr
                     <div className="space-y-3">
                         <h3 className="font-bold text-sm mb-2">Detailed Ratings (Optional)</h3>
                         <StarRating label="Quality" value={qualityRating} onChange={setQualityRating} />
-                        <StarRating label="Accuracy" value={accuracyRating} onChange={setAccuracyRating} />
                         <StarRating label="Communication" value={communicationRating} onChange={setCommunicationRating} />
                         <StarRating label="Timeliness" value={timelinessRating} onChange={setTimelinessRating} />
                     </div>

@@ -3,14 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, Edit2, Package, ShieldCheck, 
     Layers, AlertCircle, QrCode,
-    Tag, Ruler, Scale, Sparkles
+    Tag, Ruler, Scale, Sparkles, Trash2
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useTranslation } from 'react-i18next';
 import ProductPassport from '../../components/product/ProductPassport';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 export default function ProductDetail() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const currentLang = i18n.language || 'en';
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
@@ -23,6 +25,24 @@ export default function ProductDetail() {
     const [error, setError] = useState<string | null>(null);
     const [activeImageIdx, setActiveImageIdx] = useState(0);
     const [imageError, setImageError] = useState<Record<number, boolean>>({});
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteProduct = async () => {
+        if (!id) return;
+        setIsDeleting(true);
+        try {
+            await api.delete(`/products/${id}`);
+            setShowDeleteModal(false);
+            useDashboardStore.getState().fetchMetrics();
+            navigate('/artisan/products');
+        } catch (err: any) {
+            console.error("Failed to delete product", err);
+            alert(err.response?.data?.detail || "Failed to delete product. Please try again.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
         if (!id) return;
@@ -138,31 +158,41 @@ export default function ProductDetail() {
     return (
         <div className="w-full min-h-screen bg-surface-container-lowest flex flex-col">
             {/* Top Navigation Bar */}
-            <div className="sticky top-0 bg-surface/95 backdrop-blur-md border-b border-outline-variant z-20 px-4 py-3">
+            <div className="sticky top-0 bg-surface/95 backdrop-blur-md border-b border-outline-variant z-20 px-4 pt-10 pb-3">
                 <div className="flex items-center justify-between gap-3">
                     <button 
                         onClick={() => navigate('/artisan/products')}
-                        className="flex items-center gap-2 text-stone-700 hover:text-stone-900 font-bold text-sm px-2.5 py-1.5 rounded-xl hover:bg-stone-100 transition-colors"
+                        className="flex items-center gap-1.5 text-stone-700 hover:text-stone-900 font-bold text-sm px-2.5 py-1.5 rounded-xl hover:bg-stone-100 transition-colors active:scale-95"
                     >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>My Products</span>
+                        <ArrowLeft className="w-5 h-5 shrink-0" />
+                        <span className="truncate max-w-[120px] sm:max-w-none">{t('products.title', { defaultValue: 'My Products' })}</span>
                     </button>
 
-                    <div className="flex items-center gap-2">
-                        <span className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                    <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                             isPublished 
                                 ? 'bg-green-100 text-green-700 border border-green-200' 
                                 : 'bg-stone-100 text-stone-600 border border-stone-200'
                         }`}>
-                            {isPublished ? '● Published' : '○ Draft'}
+                            {isPublished ? `● ${t('products.published', { defaultValue: 'Published' })}` : `○ ${t('products.drafts', { defaultValue: 'Draft' })}`}
                         </span>
                         
                         <button
+                            type="button"
+                            onClick={() => setShowDeleteModal(true)}
+                            className="p-2 text-red-600 hover:bg-red-50 active:scale-95 rounded-xl transition-all border border-red-200/60 flex items-center justify-center min-w-[36px] min-h-[36px]"
+                            title="Delete Product"
+                            aria-label="Delete Product"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        <button
                             onClick={() => navigate(`/artisan/products/${product.id}/edit`)}
-                            className="flex items-center gap-1.5 bg-primary text-on-primary px-3 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-primary/90 transition-all"
+                            className="flex items-center gap-1.5 bg-primary text-on-primary px-3 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-primary/90 active:scale-95 transition-all min-h-[36px]"
                         >
                             <Edit2 className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <span>{t('common.edit', { defaultValue: 'Edit' })}</span>
                         </button>
                     </div>
                 </div>
@@ -264,7 +294,7 @@ export default function ProductDetail() {
                                 )}
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-tight">
-                                {product.title || 'Untitled Product'}
+                                {product.translations?.[currentLang]?.title || product.title || 'Untitled Product'}
                             </h1>
                             <p className="text-xs text-stone-400 mt-1 font-mono">
                                 ID: {product.id}
@@ -301,9 +331,9 @@ export default function ProductDetail() {
                         {/* Full Description */}
                         <div>
                             <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Description</h3>
-                            {product.description ? (
+                            {(product.translations?.[currentLang]?.description || product.description) ? (
                                 <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {product.description}
+                                    {product.translations?.[currentLang]?.description || product.description}
                                 </p>
                             ) : (
                                 <p className="text-stone-400 text-sm italic">No description provided.</p>
@@ -538,21 +568,63 @@ export default function ProductDetail() {
             <div className="sticky bottom-0 bg-surface/95 backdrop-blur-md border-t border-outline-variant z-20 p-4 mt-auto">
                 <div className="flex items-center justify-between gap-3">
                     <button
-                        onClick={() => navigate('/artisan/products')}
-                        className="px-4 py-2.5 rounded-xl border border-outline-variant font-bold text-sm text-stone-700 hover:bg-stone-100 transition-colors shrink-0"
+                        type="button"
+                        onClick={() => setShowDeleteModal(true)}
+                        className="py-2.5 px-4 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs sm:text-sm transition-colors flex items-center gap-1.5 shrink-0"
                     >
-                        Back
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete</span>
                     </button>
                     
                     <button
                         onClick={() => navigate(`/artisan/products/${product.id}/edit`)}
-                        className="flex-1 py-2.5 px-4 bg-primary text-on-primary font-bold text-sm rounded-xl shadow hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 py-2.5 px-4 bg-primary text-on-primary font-bold text-xs sm:text-sm rounded-xl shadow hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
                     >
                         <Edit2 className="w-4 h-4" />
                         <span>Edit Product</span>
                     </button>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in" onClick={() => setShowDeleteModal(false)}>
+                    <div className="bg-surface rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-outline-variant" onClick={(e) => e.stopPropagation()}>
+                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                            <Trash2 size={24} />
+                        </div>
+                        <h2 className="text-lg font-bold text-center text-stone-800 mb-1">{t('products.delete_product') || "Delete Product?"}</h2>
+                        <p className="text-xs sm:text-sm text-center text-stone-600 mb-6">
+                            {t('products.are_you_sure_delete') || "Are you sure you want to delete this product? It will be removed from your catalogue."}
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                type="button"
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                className="flex-1 py-3 font-bold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl text-sm transition-colors"
+                            >
+                                {t('common.cancel') || "Cancel"}
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleDeleteProduct}
+                                disabled={isDeleting}
+                                className="flex-1 py-3 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    <span>{t('products.delete_confirm') || "Delete"}</span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

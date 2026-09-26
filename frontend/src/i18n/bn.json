@@ -313,7 +313,24 @@
     "no_enquiries": "কোনো সাম্প্রতিক অনুসন্ধান নেই",
     "next_step_desc": "আরো ক্রেতাদের আকৃষ্ট করতে আপনার কারুশিল্পের ছবি আপলোড করুন!",
     "greeting_prefix": "আজ আপনি কী করতে চান?",
-    "see_all": "সব দেখুন"
+    "see_all": "সব দেখুন",
+    "total_order_value": "মোট অর্ডার মূল্য",
+    "products": "পণ্যসমূহ",
+    "published": "প্রকাশিত",
+    "new_enquiries": "নতুন অনুসন্ধান",
+    "pending_quotes": "মুলতুবি উদ্ধৃতি",
+    "active_orders": "সক্রিয় অর্ডার",
+    "completed": "সম্পন্ন",
+    "messages": "বার্তা",
+    "reviews": "পর্যালোচনা",
+    "analytics": "বিশ্লেষণ",
+    "performance_insights": "পারফরম্যান্স অন্তর্দৃষ্টি",
+    "completion_rate": "সম্পূর্ণতার হার",
+    "cancellation_rate": "বাতিলের হার",
+    "on_time_rate": "সময়মতো সরবরাহের হার",
+    "recent_activity": "সাম্প্রতিক কার্যকলাপ",
+    "no_recent_activity": "কোনো সাম্প্রতিক কার্যকলাপ নেই",
+    "order_updated": "অর্ডার {{id}} আপডেট করা হয়েছে"
   },
   "nav": {
     "home": "হোম",
@@ -461,5 +478,25 @@
     "subtotal": "উপমোট",
     "date": "তারিখ",
     "transaction_ref": "লেনদেন নম্বর"
+  },
+  "dashboard": {
+    "total_order_value": "মোট অর্ডার মূল্য",
+    "products": "পণ্যসমূহ",
+    "published": "প্রকাশিত",
+    "new_enquiries": "নতুন অনুসন্ধান",
+    "pending_quotes": "মুলতুবি উদ্ধৃতি",
+    "active_orders": "সক্রিয় অর্ডার",
+    "completed": "সম্পন্ন",
+    "messages": "বার্তা",
+    "reviews": "পর্যালোচনা",
+    "analytics": "বিশ্লেষণ",
+    "performance_insights": "পারফরম্যান্স অন্তর্দৃষ্টি",
+    "completion_rate": "সম্পূর্ণতার হার",
+    "cancellation_rate": "বাতিলের হার",
+    "on_time_rate": "সময়মতো সরবরাহের হার",
+    "recent_activity": "সাম্প্রতিক কার্যকলাপ",
+    "see_all": "সব দেখুন",
+    "no_recent_activity": "কোনো সাম্প্রতিক কার্যকলাপ নেই",
+    "order_updated": "অর্ডার {{id}} আপডেট করা হয়েছে"
   }
 }

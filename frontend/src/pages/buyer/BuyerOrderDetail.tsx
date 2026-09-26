@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Star, X, RefreshCcw, ShieldAlert, FileText } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Star, X, RefreshCcw, ShieldAlert, FileText, FileDown, Loader2, CheckCircle, PackageCheck } from 'lucide-react';
 import axios from 'axios';
 import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
+import { isOrderPaid, downloadOrderInvoice } from '../../lib/invoiceDownload';
 import MessagingUI from '../../components/buyer/MessagingUI';
 import ReviewModal from '../../components/buyer/ReviewModal';
 import InvoiceModal from '../../components/buyer/InvoiceModal';
@@ -34,6 +35,7 @@ export default function BuyerOrderDetail() {
     const [isCancelling, setIsCancelling] = useState(false);
 
     const [showReviewModal, setShowReviewModal] = useState(false);
+    const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
 
     const [showDisputeModal, setShowDisputeModal] = useState(false);
     const [disputeReason, setDisputeReason] = useState('quality_issue');
@@ -73,15 +75,28 @@ export default function BuyerOrderDetail() {
         setShowInvoiceModal(true);
     };
 
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+    const handleDownloadPdf = async () => {
+        if (!id) return;
+        setIsDownloadingPdf(true);
+        try {
+            await downloadOrderInvoice(order || id, order?.display_id);
+        } catch (err: any) {
+            console.error("Failed to download invoice:", err);
+            alert(err?.message || "Failed to download invoice PDF.");
+        } finally {
+            setIsDownloadingPdf(false);
+        }
+    };
+
     useEffect(() => {
         fetchOrder();
     }, [id, token]);
 
     async function fetchOrder() {
         try {
-            const res = await axios.get(`${API_URL}/orders/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/orders/${id}`);
             setOrder(res.data.order);
             setHistory(res.data.history || []);
         } catch (err: any) {
@@ -135,23 +150,45 @@ export default function BuyerOrderDetail() {
         }
     };
 
+    const handleConfirmDelivery = async () => {
+        if (!id) return;
+        setIsConfirmingDelivery(true);
+        try {
+            await api.patch(`/orders/${id}/status`, {
+                status: 'completed',
+                note: 'Buyer confirmed receipt and completed order'
+            });
+            await fetchOrder();
+            setShowReviewModal(true);
+        } catch (err: any) {
+            console.error("Failed to confirm delivery", err);
+            alert(err.response?.data?.detail || "Failed to confirm delivery");
+        } finally {
+            setIsConfirmingDelivery(false);
+        }
+    };
+
     if (loading) {
         return <div className="flex justify-center py-20 min-h-screen bg-surface-container-lowest"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
     }
     
     if (!order) return <div className="p-6 text-center">Order not found.</div>;
 
-        const isCancelled = ['cancelled', 'cancellation_requested'].includes(order.status);
+    const isCancelled = ['cancelled', 'cancellation_requested'].includes(order.status);
     const isReturned = ['return_requested', 'returned', 'disputed'].includes(order.status);
 
     const canCancel = ['confirmed', 'in_production'].includes(order.status);
-    const canReview = order.status === 'completed';
+    const canReview = ['completed', 'delivered'].includes(order.status);
 
     return (
-        <div className="max-w-5xl mx-auto p-4 sm:p-6 pb-24 bg-surface-container-lowest min-h-screen">
-            <div className="flex items-center mb-6">
-                <button onClick={() => navigate('/buyer/orders')} className="mr-4 w-10 h-10 bg-surface rounded-full flex items-center justify-center hover:bg-surface-container shadow-sm border border-outline-variant">
-                    <ArrowLeft className="w-5 h-5" />
+        <div className="max-w-5xl mx-auto px-4 pt-14 pb-24 sm:p-6 bg-surface-container-lowest min-h-screen">
+            <div className="flex items-center mb-6 pt-3">
+                <button 
+                    onClick={() => navigate('/buyer/orders')} 
+                    className="mr-4 w-10 h-10 bg-surface rounded-full flex items-center justify-center hover:bg-surface-container shadow-sm border border-outline-variant cursor-pointer active:scale-95 shrink-0"
+                    aria-label="Back to Orders"
+                >
+                    <ArrowLeft className="w-5 h-5 text-on-surface" />
                 </button>
                 <div>
                     <h1 className="text-2xl font-bold text-on-surface">Order #{order.display_id}</h1>
@@ -250,28 +287,80 @@ export default function BuyerOrderDetail() {
                     <div className="bg-surface rounded-2xl p-5 shadow-sm border border-outline-variant space-y-3">
                         <h2 className="font-bold mb-2">Actions</h2>
                         
+                        {['dispatched', 'delivered'].includes(order.status) && (
+                            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5 shadow-sm">
+                                <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                                    <PackageCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                                    <span>Package Arrived?</span>
+                                </div>
+                                <p className="text-xs text-emerald-700 leading-relaxed">
+                                    Confirm you received your order to complete the purchase and rate your artisan.
+                                </p>
+                                <button
+                                    onClick={handleConfirmDelivery}
+                                    disabled={isConfirmingDelivery}
+                                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs disabled:opacity-60 cursor-pointer"
+                                >
+                                    {isConfirmingDelivery ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                                            <span>Confirming Receipt...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle className="w-4 h-4 shrink-0" />
+                                            <span>Confirm Received & Rate</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
+                        {canReview && (
+                            <button 
+                                onClick={() => setShowReviewModal(true)}
+                                className="w-full py-3 bg-secondary-container text-on-secondary-container font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary-container/90 transition-colors shadow-sm cursor-pointer"
+                            >
+                                <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> Rate & Review Artisan
+                            </button>
+                        )}
+
                         <button 
                             onClick={() => navigate(`/buyer/product/${order.product_id}`)}
-                            className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                            className="w-full py-3 bg-surface-container border border-outline-variant/60 text-stone-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
                         >
                             <RefreshCcw className="w-4 h-4" /> Send Similar Enquiry
                         </button>
                         
-                        {canReview && (
-                            <button 
-                                onClick={() => setShowReviewModal(true)}
-                                className="w-full py-3 bg-secondary-container text-on-secondary-container font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary-container/90 transition-colors"
-                            >
-                                <Star className="w-4 h-4" /> Review Product
-                            </button>
+                        {isOrderPaid(order) && (
+                            <div className="flex gap-2">
+                                <button 
+                                    className="flex-1 py-3 bg-primary text-on-primary font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm active:scale-95 disabled:opacity-60"
+                                    onClick={handleDownloadPdf}
+                                    disabled={isDownloadingPdf}
+                                >
+                                    {isDownloadingPdf ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                                            <span>Downloading PDF...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FileDown className="w-4 h-4 shrink-0" />
+                                            <span>Download Invoice</span>
+                                        </>
+                                    )}
+                                </button>
+                                <button 
+                                    className="p-3 border border-stone-200 bg-white text-stone-700 font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-stone-50 transition-colors shadow-sm"
+                                    onClick={handleViewInvoice}
+                                    title="View Invoice Details"
+                                >
+                                    <FileText className="w-4 h-4 text-stone-600" />
+                                    <span className="hidden sm:inline text-xs">Preview</span>
+                                </button>
+                            </div>
                         )}
-                        
-                        <button 
-                            className="w-full py-3 border border-stone-200 text-stone-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors shadow-sm"
-                            onClick={handleViewInvoice}
-                        >
-                            <FileText className="w-4 h-4 text-primary" /> View / Download Invoice
-                        </button>
                         
                         {canCancel && (
                             <button 

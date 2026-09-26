@@ -1,5 +1,6 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from auth.dependencies import get_current_user, get_token
+from auth.dependencies import get_current_user, get_optional_user, get_token
 from database import get_authenticated_client, get_service_client
 from .schemas import OrderStatusUpdate, CancelOrderRequest, OrderCreate, CheckoutBatchRequest
 from datetime import datetime
@@ -17,7 +18,7 @@ VALID_TRANSITIONS = {
     "confirmed": ["in_production", "cancellation_requested", "cancelled"],
     "in_production": ["ready_for_dispatch", "cancellation_requested", "cancelled"],
     "ready_for_dispatch": ["dispatched", "cancelled"],
-    "dispatched": ["delivered", "return_requested"],
+    "dispatched": ["delivered", "completed", "return_requested"],
     "delivered": ["completed", "return_requested"],
     "return_requested": ["returned", "disputed"],
     "cancellation_requested": ["cancelled", "in_production"] # Can reject cancellation
@@ -37,35 +38,54 @@ def create_single_order(client, current_user, item, delivery_address=None, notes
     if product.get("status") != "published":
         raise HTTPException(status_code=400, detail="Product is currently unavailable for purchase")
 
-    # Business Rule: Check Enquiry & Artisan Confirmation
-    if item.enquiry_id:
-        enq_res = client.table("buyer_enquiries").select("*").eq("id", item.enquiry_id).execute()
-        if not enq_res.data:
-            raise HTTPException(status_code=404, detail="Referenced enquiry not found")
-        enquiry = enq_res.data[0]
-        if enquiry.get("buyer_id") != buyer_id or enquiry.get("product_id") != item.product_id:
-            raise HTTPException(status_code=403, detail="Invalid enquiry reference for this product/buyer")
-        
-        # Check rejection
-        if enquiry.get("status") == "rejected" or enquiry.get("artisan_response") in ["cannot_fulfil", "rejected"]:
-            raise HTTPException(status_code=400, detail="Artisan did not confirm this request.")
-        
-        # Check pending
-        is_confirmed = (enquiry.get("status") in ["accepted", "responded"] and enquiry.get("artisan_response") in ["accepted", "interested"]) or enquiry.get("status") == "quote_sent"
-        if not is_confirmed:
-            raise HTTPException(status_code=400, detail="Enquiry is waiting for artisan confirmation.")
-    else:
-        # If no enquiry_id explicitly provided, check if product requires enquiry confirmation
-        if product.get("is_made_to_order") or product.get("customisation_available"):
-            check_enq = client.table("buyer_enquiries").select("*").eq("buyer_id", buyer_id).eq("product_id", item.product_id).execute()
-            confirmed = [e for e in (check_enq.data or []) if (e.get("status") in ["accepted", "responded"] and e.get("artisan_response") in ["accepted", "interested"]) or e.get("status") == "quote_sent"]
-            if not confirmed:
-                raise HTTPException(status_code=400, detail="This product requires artisan confirmation before placing an order. Please send an enquiry first.")
-            item.enquiry_id = confirmed[0]["id"]
+    # Business Rule: Check Enquiry & Artisan Confirmation (MANDATORY for EVERY single purchase attempt)
+    if not item.enquiry_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="An approved enquiry is required before purchasing this product. Please send an enquiry to the artisan."
+        )
 
-    moq = product.get("moq") or 1
-    if item.quantity < moq:
-        raise HTTPException(status_code=400, detail=f"Minimum order quantity is {moq}")
+    enq_res = client.table("buyer_enquiries").select("*").eq("id", item.enquiry_id).execute()
+    if not enq_res.data:
+        raise HTTPException(status_code=404, detail="Referenced enquiry not found")
+    enquiry = enq_res.data[0]
+    if enquiry.get("buyer_id") != buyer_id or enquiry.get("product_id") != item.product_id:
+        raise HTTPException(status_code=403, detail="Invalid enquiry reference for this product/buyer")
+    
+    # Check if enquiry has already been consumed / ordered
+    if enquiry.get("status") in ["ordered", "completed", "used", "closed", "cancelled"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="This enquiry has already been used for a previous purchase. A new enquiry is required for every purchase."
+        )
+
+    # Check if an existing confirmed order already used this enquiry_id
+    try:
+        existing_order = service_client.table("orders").select("id").eq("enquiry_id", item.enquiry_id).execute()
+        if existing_order.data and len(existing_order.data) > 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="This enquiry has already been consumed by an order. A new enquiry is required for every purchase."
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    # Check rejection
+    if enquiry.get("status") == "rejected" or enquiry.get("artisan_response") in ["cannot_fulfil", "rejected"]:
+        raise HTTPException(status_code=400, detail="Your enquiry was not approved by the artisan.")
+    
+    # Check pending vs confirmed
+    is_confirmed = (
+        (enquiry.get("status") in ["accepted", "responded"] and enquiry.get("artisan_response") in ["accepted", "interested"]) 
+        or enquiry.get("status") in ["quote_sent", "accepted"]
+    )
+    if not is_confirmed:
+        raise HTTPException(status_code=403, detail="Payment unavailable: Enquiry is waiting for artisan confirmation.")
+
+    if item.quantity < 1:
+        raise HTTPException(status_code=400, detail="Quantity must be at least 1")
 
     if product.get("stock_quantity") is not None and not product.get("is_made_to_order"):
         if item.quantity > product["stock_quantity"]:
@@ -119,6 +139,13 @@ def create_single_order(client, current_user, item, delivery_address=None, notes
         raise HTTPException(status_code=500, detail="Failed to create order")
     created_order = ord_res.data[0]
     order_id = created_order["id"]
+
+    # Mark enquiry as fulfilled/ordered if linked
+    if item.enquiry_id:
+        try:
+            service_client.table("buyer_enquiries").update({"status": "ordered"}).eq("id", item.enquiry_id).execute()
+        except Exception as e:
+            print("Failed to update enquiry status:", e)
 
     # Insert status history
     hist_data = {
@@ -391,3 +418,13 @@ def decision_cancel_order(id: str, decision: dict, current_user: dict = Depends(
 async def get_order_invoice_alias(id: str, current_user: dict = Depends(get_current_user), token: str = Depends(get_token)):
     from payments.router import get_invoice
     return await get_invoice(id, current_user, token)
+
+@router.get("/{id}/invoice/pdf")
+async def get_order_invoice_pdf_alias(
+    id: str,
+    current_user: Optional[dict] = Depends(get_optional_user),
+    token: Optional[str] = None
+):
+    from payments.router import get_invoice_pdf_route
+    return await get_invoice_pdf_route(id, current_user, token)
+

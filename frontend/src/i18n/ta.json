@@ -314,7 +314,24 @@
     "no_enquiries": "சமீபத்திய விசாரணைகள் இல்லை",
     "next_step_desc": "அதிக வாங்குபவர்களை ஈர்க்க உங்கள் கைவினைப்பொருளின் புகைப்படங்களை பதிவேற்றவும்!",
     "greeting_prefix": "இன்று என்ன செய்ய விரும்புகிறீர்கள்?",
-    "see_all": "அனைத்தையும் காண்"
+    "see_all": "அனைத்தையும் காண்",
+    "total_order_value": "மொத்த ஆர்டர் மதிப்பு",
+    "products": "தயாரிப்புகள்",
+    "published": "வெளியிடப்பட்டது",
+    "new_enquiries": "புதிய விசாரணைகள்",
+    "pending_quotes": "நிலுவை மேற்கோள்கள்",
+    "active_orders": "செயலில் உள்ள ஆர்டர்கள்",
+    "completed": "முடிந்தது",
+    "messages": "செய்திகள்",
+    "reviews": "மதிப்புரைகள்",
+    "analytics": "பகுப்பாய்வு",
+    "performance_insights": "செயல்திறன் நுண்ணறிவு",
+    "completion_rate": "நிறைவு விகிதம்",
+    "cancellation_rate": "ரத்து விகிதம்",
+    "on_time_rate": "சரியான நேர விகிதம்",
+    "recent_activity": "சமீபத்திய செயல்பாடு",
+    "no_recent_activity": "சமீபத்திய செயல்பாடுகள் இல்லை",
+    "order_updated": "ஆர்டர் {{id}} புதுப்பிக்கப்பட்டது"
   },
   "nav": {
     "home": "முகப்பு",
@@ -465,5 +482,25 @@
     "subtotal": "துணை மொத்தம்",
     "date": "தேதி",
     "transaction_ref": "பரிவர்த்தனை குறிப்பு"
+  },
+  "dashboard": {
+    "total_order_value": "மொத்த ஆர்டர் மதிப்பு",
+    "products": "தயாரிப்புகள்",
+    "published": "வெளியிடப்பட்டது",
+    "new_enquiries": "புதிய விசாரணைகள்",
+    "pending_quotes": "நிலுவை மேற்கோள்கள்",
+    "active_orders": "செயலில் உள்ள ஆர்டர்கள்",
+    "completed": "முடிந்தது",
+    "messages": "செய்திகள்",
+    "reviews": "மதிப்புரைகள்",
+    "analytics": "பகுப்பாய்வு",
+    "performance_insights": "செயல்திறன் நுண்ணறிவு",
+    "completion_rate": "நிறைவு விகிதம்",
+    "cancellation_rate": "ரத்து விகிதம்",
+    "on_time_rate": "சரியான நேர விகிதம்",
+    "recent_activity": "சமீபத்திய செயல்பாடு",
+    "see_all": "அனைத்தையும் காண்",
+    "no_recent_activity": "சமீபத்திய செயல்பாடுகள் இல்லை",
+    "order_updated": "ஆர்டர் {{id}} புதுப்பிக்கப்பட்டது"
   }
 }

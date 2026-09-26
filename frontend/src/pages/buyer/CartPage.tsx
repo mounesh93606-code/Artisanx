@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,8 +7,12 @@ import { useCartStore } from '../../stores/cartStore';
 export default function CartPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { items, updateQuantity, removeItem, clearCart, getTotal } = useCartStore();
+    const { items, updateQuantity, removeItem, clearCart, getTotal, validateCart } = useCartStore();
     const { subtotal, delivery, total } = getTotal();
+
+    useEffect(() => {
+        validateCart();
+    }, [validateCart]);
 
     return (
         <div className="w-full relative pb-32 bg-surface-container-lowest min-h-screen">

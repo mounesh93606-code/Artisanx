@@ -38,20 +38,40 @@ export default function BuyerEnquiries() {
         return enquiries.filter(e => e.status === 'quote_sent').length;
     }, [enquiries]);
 
+    const inProgressCount = useMemo(() => {
+        return enquiries.filter(e => ['new', 'viewed', 'responded', 'changes_requested', 'quote_sent'].includes(e.status) && !e.is_consumed && e.status !== 'closed').length;
+    }, [enquiries]);
+
+    const completedCount = useMemo(() => {
+        return enquiries.filter(e => ['accepted', 'closed', 'ordered', 'completed'].includes(e.status) || e.is_consumed).length;
+    }, [enquiries]);
+
     const filteredEnquiries = useMemo(() => {
         if (activeFilter === 'quotes') {
             return enquiries.filter(e => e.status === 'quote_sent');
         }
         if (activeFilter === 'in_progress') {
-            return enquiries.filter(e => ['new', 'viewed', 'responded', 'changes_requested'].includes(e.status));
+            return enquiries.filter(e => ['new', 'viewed', 'responded', 'changes_requested'].includes(e.status) && !e.is_consumed && e.status !== 'closed');
         }
         if (activeFilter === 'completed') {
-            return enquiries.filter(e => e.status === 'accepted');
+            return enquiries.filter(e => ['accepted', 'closed', 'ordered', 'completed'].includes(e.status) || e.is_consumed);
         }
         return enquiries;
     }, [enquiries, activeFilter]);
 
-    const renderStatusBadge = (status: string) => {
+    const renderStatusBadge = (enq: any) => {
+        const status = enq?.status;
+        const isConsumed = enq?.is_consumed || ['closed', 'ordered', 'completed'].includes(status);
+
+        if (isConsumed || status === 'closed' || status === 'ordered' || status === 'completed') {
+            return (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Order Placed & Paid
+                </span>
+            );
+        }
+
         switch (status) {
             case 'quote_sent':
                 return (
@@ -106,11 +126,11 @@ export default function BuyerEnquiries() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-28">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+        <div className="max-w-4xl mx-auto px-4 pt-14 pb-28 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5 pt-3">
                 <div>
                     <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2.5">
-                        <Mail className="w-6 h-6 text-primary" />
+                        <Mail className="w-6 h-6 text-primary shrink-0" />
                         {t('buyer_enquiries.title', 'My Enquiries')}
                     </h1>
                     <p className="text-xs sm:text-sm text-on-surface-variant mt-1">
@@ -159,7 +179,7 @@ export default function BuyerEnquiries() {
                                 : 'bg-surface border border-outline-variant text-stone-600 hover:bg-surface-container'
                         }`}
                     >
-                        In Progress
+                        In Progress ({inProgressCount})
                     </button>
                     <button
                         onClick={() => setActiveFilter('completed')}
@@ -169,7 +189,7 @@ export default function BuyerEnquiries() {
                                 : 'bg-surface border border-outline-variant text-stone-600 hover:bg-surface-container'
                         }`}
                     >
-                        Confirmed Orders
+                        Confirmed Orders ({completedCount})
                     </button>
                 </div>
             )}
@@ -222,7 +242,7 @@ export default function BuyerEnquiries() {
                                                     {enq.products?.title || 'Custom Product'}
                                                 </h3>
                                                 <div className="self-start sm:self-auto">
-                                                    {renderStatusBadge(enq.status)}
+                                                    {renderStatusBadge(enq)}
                                                 </div>
                                             </div>
 

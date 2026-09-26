@@ -310,7 +310,24 @@
     "no_enquiries": "ಇತ್ತೀಚಿನ ವಿಚಾರಣೆಗಳಿಲ್ಲ",
     "next_step_desc": "ಹೆಚ್ಚು ಖರೀದಿದಾರರನ್ನು ಆಕರ್ಷಿಸಲು ನಿಮ್ಮ ಇತ್ತೀಚಿನ ಕರಕುಶಲ ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ!",
     "greeting_prefix": "ಇಂದು ನೀವು ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?",
-    "see_all": "ಎಲ್ಲವನ್ನೂ ನೋಡಿ"
+    "see_all": "ಎಲ್ಲವನ್ನೂ ನೋಡಿ",
+    "total_order_value": "ಒಟ್ಟು ಆರ್ಡರ್ ಮೌಲ್ಯ",
+    "products": "ಉತ್ಪನ್ನಗಳು",
+    "published": "ಪ್ರಕಟಿಸಲಾಗಿದೆ",
+    "new_enquiries": "ಹೊಸ ವಿಚಾರಣೆಗಳು",
+    "pending_quotes": "ಬಾಕಿ ಉಳಿದ ಕೋಟ್‌ಗಳು",
+    "active_orders": "ಸಕ್ರಿಯ ಆರ್ಡರ್‌ಗಳು",
+    "completed": "ಪೂರ್ಣಗೊಂಡಿದೆ",
+    "messages": "ಸಂದೇಶಗಳು",
+    "reviews": "ವಿಮರ್ಶೆಗಳು",
+    "analytics": "ವಿಶ್ಲೇಷಣೆ",
+    "performance_insights": "ಕಾರ್ಯಕ್ಷಮತೆಯ ಒಳನೋಟಗಳು",
+    "completion_rate": "ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ ದರ",
+    "cancellation_rate": "ರದ್ದತಿ ದರ",
+    "on_time_rate": "ಸಮಯಕ್ಕೆ ಸರಿಯಾದ ದರ",
+    "recent_activity": "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ",
+    "no_recent_activity": "ಯಾವುದೇ ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ ಇಲ್ಲ",
+    "order_updated": "ಆರ್ಡರ್ {{id}} ನವೀಕರಿಸಲಾಗಿದೆ"
   },
   "nav": {
     "home": "ಮುಖಪುಟ",
@@ -458,5 +475,25 @@
     "subtotal": "ಉಪ ಒಟ್ಟು",
     "date": "ದಿನಾಂಕ",
     "transaction_ref": "ವಹಿವಾಟು ಉಲ್ಲೇಖ"
+  },
+  "dashboard": {
+    "total_order_value": "ಒಟ್ಟು ಆರ್ಡರ್ ಮೌಲ್ಯ",
+    "products": "ಉತ್ಪನ್ನಗಳು",
+    "published": "ಪ್ರಕಟಿಸಲಾಗಿದೆ",
+    "new_enquiries": "ಹೊಸ ವಿಚಾರಣೆಗಳು",
+    "pending_quotes": "ಬಾಕಿ ಉಳಿದ ಕೋಟ್‌ಗಳು",
+    "active_orders": "ಸಕ್ರಿಯ ಆರ್ಡರ್‌ಗಳು",
+    "completed": "ಪೂರ್ಣಗೊಂಡಿದೆ",
+    "messages": "ಸಂದೇಶಗಳು",
+    "reviews": "ವಿಮರ್ಶೆಗಳು",
+    "analytics": "ವಿಶ್ಲೇಷಣೆ",
+    "performance_insights": "ಕಾರ್ಯಕ್ಷಮತೆಯ ಒಳನೋಟಗಳು",
+    "completion_rate": "ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ ದರ",
+    "cancellation_rate": "ರದ್ದತಿ ದರ",
+    "on_time_rate": "ಸಮಯಕ್ಕೆ ಸರಿಯಾದ ದರ",
+    "recent_activity": "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ",
+    "see_all": "ಎಲ್ಲವನ್ನೂ ನೋಡಿ",
+    "no_recent_activity": "ಯಾವುದೇ ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ ಇಲ್ಲ",
+    "order_updated": "ಆರ್ಡರ್ {{id}} ನವೀಕರಿಸಲಾಗಿದೆ"
   }
 }

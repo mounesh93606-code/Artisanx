@@ -26,6 +26,7 @@ interface CartState {
     removeItem: (id: string) => void;
     clearCart: () => void;
     setDirectItem: (item: CartItem | null) => void;
+    validateCart: () => Promise<void>;
     getItemCount: () => number;
     getSubtotal: () => number;
     getTotal: () => { subtotal: number; delivery: number; total: number };
@@ -106,6 +107,18 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     setDirectItem: (item: CartItem | null) => {
         set({ directItem: item });
+    },
+    validateCart: async () => {
+        try {
+            const api = (await import('../lib/api')).default;
+            const res = await api.get('/products/catalogue/list', { params: { per_page: 100 } });
+            const activeIds = new Set((res.data?.items || []).map((p: any) => p.id));
+            const valid = get().items.filter(i => activeIds.has(i.productId));
+            persistItems(valid);
+            set({ items: valid });
+        } catch {
+            // keep current on error
+        }
     },
 
     getItemCount: () => {

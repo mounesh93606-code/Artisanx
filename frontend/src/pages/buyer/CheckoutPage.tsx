@@ -19,8 +19,12 @@ export default function CheckoutPage() {
 
     // Determine checkout items: direct item if direct mode, else cart items
     const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+    // Prevents the cart-empty useEffect from navigating away once order is submitted
+    const [orderPlaced, setOrderPlaced] = useState(false);
 
     useEffect(() => {
+        // Once order is placed don't react to cart changes (cart gets cleared during payment)
+        if (orderPlaced) return;
         if (isDirect && directItem) {
             setCheckoutItems([directItem]);
         } else if (cartItems.length > 0) {
@@ -29,7 +33,7 @@ export default function CheckoutPage() {
             // Nothing to checkout, navigate back to cart
             navigate('/buyer/cart');
         }
-    }, [isDirect, directItem, cartItems, navigate]);
+    }, [isDirect, directItem, cartItems, navigate, orderPlaced]);
 
     // Form fields
     const [fullName, setFullName] = useState(user?.display_name || '');
@@ -78,10 +82,16 @@ export default function CheckoutPage() {
                 customization: item.customization || null
             }));
 
+            const firstProductId = checkoutItems[0]?.productId || '';
             const isNative = Capacitor.isNativePlatform();
+            
+            // Cashfree PG requires a valid HTTP/HTTPS return_url
+            // On Native mobile, route via local backend return landing page (accessible via adb reverse tcp:8000 tcp:8000)
+            const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+            const localBackend = rawApiUrl.includes('onrender.com') ? 'http://localhost:8000' : rawApiUrl;
             const returnUrl = isNative
-                ? `artisanx://payment/status?order_id={order_id}`
-                : `${window.location.origin}/buyer/payment/status?order_id={order_id}`;
+                ? `${localBackend}/payments/cashfree/return?product_id=${firstProductId}&order_id={order_id}`
+                : `${window.location.origin}/buyer/product/${firstProductId}?order_id={order_id}`;
 
             // Call Cashfree order creation endpoint
             const res = await api.post('/payments/cashfree/create-order', {
@@ -92,38 +102,36 @@ export default function CheckoutPage() {
                 return_url: returnUrl
             });
 
-            // Clean up cart store
-            if (isDirect) {
-                setDirectItem(null);
-            } else {
-                clearCart();
-            }
-
             const { payment_session_id, order_id, environment, checkout_url } = res.data;
 
-            if (payment_session_id && !payment_session_id.startsWith('sandbox_session_')) {
-                const targetCheckoutUrl = checkout_url || (
-                    (environment || '').toLowerCase() === 'production'
+            // Mark order as placed — prevents cart-empty useEffect from navigating away
+            setOrderPlaced(true);
+
+            if (payment_session_id) {
+                // Clear cart / direct buy state before payment UI opens
+                if (isDirect) setDirectItem(null); else clearCart();
+
+                const effectiveCheckoutUrl = checkout_url || (
+                    (environment || 'SANDBOX').toUpperCase() === 'PRODUCTION'
                         ? `https://api.cashfree.com/checkout/?pt=${payment_session_id}`
                         : `https://sandbox.cashfree.com/checkout/?pt=${payment_session_id}`
                 );
 
-                // If running inside Capacitor native Android app, open with Browser plugin
-                // so user completes payment and Cashfree redirects back to artisanx://
+                // On Native mobile app, open the checkout in the native in-app browser
                 if (isNative) {
-                    await Browser.open({ url: targetCheckoutUrl });
-                    return;
+                    try {
+                        const browserListener = await Browser.addListener('browserFinished', () => {
+                            browserListener.remove();
+                            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`);
+                        });
+                        await Browser.open({ url: effectiveCheckoutUrl });
+                        return;
+                    } catch (bErr) {
+                        console.warn('Native Browser.open fallback', bErr);
+                    }
                 }
 
-                const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-                // On mobile web devices, navigate directly to Cashfree's hosted checkout page
-                if (isMobile) {
-                    window.location.href = targetCheckoutUrl;
-                    return;
-                }
-
-                // On desktop, attempt Cashfree SDK first, then fallback to hosted checkout URL
+                // On Web browser, invoke Cashfree JS SDK or direct redirect
                 const cfGlobal = (window as any).Cashfree;
                 if (cfGlobal) {
                     try {
@@ -138,13 +146,13 @@ export default function CheckoutPage() {
                     }
                 }
 
-                // Fallback to hosted URL navigation
-                window.location.href = targetCheckoutUrl;
+                window.location.href = effectiveCheckoutUrl;
                 return;
             }
 
-            // Fallback or Sandbox mock redirection
-            navigate(`/buyer/payment/status?order_id=${order_id}`);
+            // Fallback (COD / simulated order)
+            if (isDirect) setDirectItem(null); else clearCart();
+            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`);
 
         } catch (err: any) {
             console.error('Order placement failed', err);

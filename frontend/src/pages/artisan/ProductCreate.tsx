@@ -30,7 +30,7 @@ const ProductCreate = () => {
     const { user, language } = useAuthStore();
     const lang = language || user?.preferred_language || 'en';
     const t = pcTranslations[lang] || pcTranslations['en'];
-    const { currentStep, reset } = useProductStore();
+    const { currentStep, setStep, reset } = useProductStore();
     const isRTL = lang === 'ur';
 
     useEffect(() => {
@@ -84,25 +84,31 @@ const ProductCreate = () => {
                                 const isActive = step.id === currentStep;
                                 
                                 return (
-                                    <div key={step.id} className="flex flex-col items-center gap-1">
-                                        <div className={`h-2 w-full rounded-full relative overflow-hidden ${
+                                    <button 
+                                        key={step.id} 
+                                        type="button"
+                                        onClick={() => setStep(step.id)}
+                                        className="flex flex-col items-center gap-1 cursor-pointer group active:scale-95 transition-transform"
+                                        title={`Jump to ${step.label}`}
+                                    >
+                                        <div className={`h-2 w-full rounded-full relative overflow-hidden transition-colors ${
                                             isCompleted ? 'bg-tertiary' : 
-                                            isActive ? 'bg-primary' : 'bg-surface-container-high'
+                                            isActive ? 'bg-primary' : 'bg-surface-container-high group-hover:bg-surface-container-highest'
                                         }`}>
                                             {isActive && <div className="absolute inset-0 bg-primary-fixed opacity-40 animate-pulse"></div>}
                                         </div>
                                         {isCompleted && (
-                                            <span className="text-[10px] text-tertiary flex items-center gap-0.5 leading-none font-bold">
+                                            <span className="text-[10px] text-tertiary flex items-center gap-0.5 leading-none font-bold truncate max-w-full">
                                                 <span className="material-symbols-outlined text-[12px]">check</span> {step.label}
                                             </span>
                                         )}
                                         {isActive && (
-                                            <span className="text-[10px] text-primary font-bold leading-none">{step.label}</span>
+                                            <span className="text-[10px] text-primary font-bold leading-none truncate max-w-full">{step.label}</span>
                                         )}
                                         {!isCompleted && !isActive && (
-                                            <span className="text-[10px] text-outline leading-none font-medium">{step.label}</span>
+                                            <span className="text-[10px] text-outline leading-none font-medium truncate max-w-full group-hover:text-on-surface">{step.label}</span>
                                         )}
-                                    </div>
+                                    </button>
                                 );
                             })}
                         </div>

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { 
     Camera, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, 
-    X, Trash2, Sliders, RotateCw, Eye, RefreshCw, Check
+    X, Trash2, Sliders, RotateCw, Eye, RefreshCw, Check, Undo2, Wand2
 } from 'lucide-react';
 import { useProductStore } from '../../stores/productStore';
 import api from '../../lib/api';
@@ -105,29 +105,29 @@ const Step1Photo = ({ t }: { t: any }) => {
         const s = score ?? 70;
         if (s >= 85) {
             return {
-                label: 'E-Commerce Ready',
+                label: 'Marketplace Ready',
                 bg: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-                barBg: 'bg-emerald-500'
+                dot: 'bg-emerald-500'
             };
         }
         if (s >= 65) {
             return {
                 label: 'Good Quality',
                 bg: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-                barBg: 'bg-blue-500'
+                dot: 'bg-blue-500'
             };
         }
         if (s >= 45) {
             return {
-                label: 'Needs Studio Touch',
+                label: 'Enhance Recommended',
                 bg: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-                barBg: 'bg-amber-500'
+                dot: 'bg-amber-500'
             };
         }
         return {
-            label: 'Retake Recommended',
+            label: 'Retake Suggested',
             bg: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
-            barBg: 'bg-rose-500'
+            dot: 'bg-rose-500'
         };
     };
 
@@ -280,19 +280,20 @@ const Step1Photo = ({ t }: { t: any }) => {
     };
 
     return (
-        <div className="flex flex-col gap-6" data-guide-id="product_create">
+        <div className="flex flex-col gap-5 max-w-full overflow-hidden" data-guide-id="product_create">
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-on-surface flex items-center gap-2">
-                        <Camera className="w-6 h-6 text-primary" />
-                        {t.photoTitle || "Product Photography"}
+                    <h2 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
+                        <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+                        <span>{t.photoTitle || "Product Photography"}</span>
                     </h2>
-                    <p className="text-xs text-on-surface-variant mt-1">
-                        Professional e-commerce photography with AI studio cutout & lighting.
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                        Simple 1-click AI enhancement or keep your original photo.
                     </p>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">
-                    {photos.length}/5 photos
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant shrink-0">
+                    {photos.length}/5
                 </span>
             </div>
             
@@ -306,30 +307,30 @@ const Step1Photo = ({ t }: { t: any }) => {
                         type="button"
                         data-guide-id="add-photo-button"
                         onClick={() => cameraInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center gap-2.5 p-5 border-2 border-dashed border-primary/30 hover:border-primary rounded-2xl bg-surface-container-lowest hover:bg-primary/5 transition-all group shadow-sm"
+                        className="flex flex-col items-center justify-center gap-2 p-4 sm:p-5 border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl bg-surface-container-lowest hover:bg-primary/5 transition-all group shadow-sm active:scale-98"
                         disabled={isLoading}
                     >
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                            <Camera className="w-6 h-6" />
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div className="text-center">
-                            <span className="text-sm font-bold text-on-surface block">{t.takePhoto || "Take Photo"}</span>
-                            <span className="text-[11px] text-on-surface-variant">Camera Capture</span>
+                            <span className="text-xs sm:text-sm font-bold text-on-surface block">{t.takePhoto || "Take Photo"}</span>
+                            <span className="text-[10px] sm:text-[11px] text-on-surface-variant">Camera Capture</span>
                         </div>
                     </button>
                     
                     <button 
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center gap-2.5 p-5 border-2 border-dashed border-secondary/30 hover:border-secondary rounded-2xl bg-surface-container-lowest hover:bg-secondary/5 transition-all group shadow-sm"
+                        className="flex flex-col items-center justify-center gap-2 p-4 sm:p-5 border-2 border-dashed border-secondary/40 hover:border-secondary rounded-2xl bg-surface-container-lowest hover:bg-secondary/5 transition-all group shadow-sm active:scale-98"
                         disabled={isLoading}
                     >
-                        <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-                            <ImageIcon className="w-6 h-6" />
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+                            <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div className="text-center">
-                            <span className="text-sm font-bold text-on-surface block">{t.chooseGallery || "Choose Gallery"}</span>
-                            <span className="text-[11px] text-on-surface-variant">Select from Device</span>
+                            <span className="text-xs sm:text-sm font-bold text-on-surface block">{t.chooseGallery || "Choose Gallery"}</span>
+                            <span className="text-[10px] sm:text-[11px] text-on-surface-variant">Select from Phone</span>
                         </div>
                     </button>
                 </div>
@@ -337,15 +338,18 @@ const Step1Photo = ({ t }: { t: any }) => {
 
             {/* Enhancing Global Banner */}
             {enhancingPhotoId && !studioState && (
-                <div className="flex items-center justify-center gap-2.5 p-3.5 bg-secondary-container/60 border border-secondary/30 text-on-secondary-container rounded-2xl text-xs sm:text-sm font-bold shadow-sm animate-pulse" data-guide-id="image-processing-loader">
-                    <Sparkles className="w-4 h-4 animate-spin text-secondary shrink-0" />
-                    <span>AI Studio: Removing background, balancing lighting & formatting for e-commerce...</span>
+                <div className="flex items-center gap-3 p-3.5 bg-primary/10 border border-primary/30 text-on-surface rounded-2xl text-xs sm:text-sm font-semibold shadow-sm animate-pulse" data-guide-id="image-processing-loader">
+                    <Sparkles className="w-5 h-5 animate-spin text-primary shrink-0" />
+                    <div>
+                        <span className="font-bold text-primary block">✨ 1-Click Auto Enhancing...</span>
+                        <span className="text-[11px] text-on-surface-variant">Cleaning background, balancing lighting & boosting colors</span>
+                    </div>
                 </div>
             )}
 
             {/* Uploading Banner */}
             {uploadPreview && (
-                <div className="p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 flex items-center gap-3">
+                <div className="p-3.5 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-container relative shrink-0">
                         <img src={uploadPreview} alt="Uploading..." className="w-full h-full object-cover opacity-60" />
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -353,15 +357,15 @@ const Step1Photo = ({ t }: { t: any }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="text-sm font-bold text-on-surface">Uploading & Analyzing...</div>
-                        <div className="text-xs text-on-surface-variant">Checking resolution, blur & lighting</div>
+                        <div className="text-xs sm:text-sm font-bold text-on-surface">Uploading & Analyzing...</div>
+                        <div className="text-[11px] text-on-surface-variant">Checking resolution, blur & lighting</div>
                     </div>
                 </div>
             )}
             
             {errorMsg && (
-                <div className="p-4 bg-error-container text-on-error-container rounded-2xl text-xs sm:text-sm font-semibold flex items-start gap-2.5">
-                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="p-3.5 bg-error-container text-on-error-container rounded-2xl text-xs sm:text-sm font-semibold flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
                     <div className="flex-1">{errorMsg}</div>
                 </div>
             )}
@@ -372,140 +376,202 @@ const Step1Photo = ({ t }: { t: any }) => {
                     const score = photo.overall_score_100 ?? (photo.quality_score ? photo.quality_score * 10 : 75);
                     const badge = getScoreBadge(score);
                     const isEnhanced = !!photo.enhanced_url;
+                    const isCurrentlyEnhanced = isEnhanced && photo.enhanced_quality;
+                    const isThisPhotoEnhancing = enhancingPhotoId === photo.id;
                     
                     return (
-                        <div key={photo.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 overflow-hidden shadow-sm p-4 sm:p-5 flex flex-col gap-4">
-                            {/* Card Header */}
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-bold text-on-surface text-base">Photo {i+1}</h4>
-                                        {photo.is_main && (
-                                            <span className="text-[10px] uppercase tracking-wider bg-primary-fixed text-on-primary-fixed px-2 py-0.5 rounded-full font-extrabold">
-                                                Main Cover
-                                            </span>
-                                        )}
-                                        {isEnhanced && (
-                                            <span className="text-[10px] uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20 px-2 py-0.5 rounded-full font-extrabold flex items-center gap-1">
-                                                <Sparkles className="w-3 h-3" /> Studio Enhanced
-                                            </span>
-                                        )}
-                                    </div>
-                                    
-                                    {/* 100-Point Quality Score Pill */}
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${badge.bg}`}>
-                                            Quality: {score}/100 • {badge.label}
+                        <div key={photo.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/40 overflow-hidden shadow-sm p-4 flex flex-col gap-3.5">
+                            
+                            {/* Card Header: Title, Main Badge, Quality Pill & Delete */}
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-bold text-on-surface text-sm sm:text-base">Photo {i+1}</h4>
+                                    {photo.is_main && (
+                                        <span className="text-[10px] uppercase tracking-wider bg-primary-fixed text-on-primary-fixed px-2 py-0.5 rounded-full font-extrabold">
+                                            Cover
                                         </span>
-                                    </div>
+                                    )}
+                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${badge.bg}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                                        <span>Quality: {score}/100</span>
+                                    </span>
                                 </div>
                                 
-                                <div className="flex items-center gap-1.5">
-                                    <button 
-                                        onClick={() => openStudioEditor(photo.id)}
-                                        className="text-xs flex items-center gap-1.5 bg-primary text-on-primary px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-primary/90 transition-all active:scale-95"
-                                    >
-                                        <Sliders className="w-3.5 h-3.5" />
-                                        <span>AI Studio</span>
-                                    </button>
-                                    <button
-                                        onClick={() => deletePhoto(photo.id)}
-                                        className="p-1.5 text-error hover:bg-error-container rounded-full transition-colors active:scale-95"
-                                        disabled={isLoading}
-                                        title="Delete photo"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => deletePhoto(photo.id)}
+                                    className="p-2 text-on-surface-variant hover:text-error hover:bg-error-container rounded-full transition-colors active:scale-95 shrink-0"
+                                    disabled={isLoading || isThisPhotoEnhancing}
+                                    title="Delete photo"
+                                    aria-label="Delete photo"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
                             </div>
 
-                            {/* Photo Visual Section */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {/* Display current active photo */}
-                                <div className="relative aspect-square rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container-low group shadow-inner">
-                                    <img 
-                                        src={photo.image_url} 
-                                        alt={`Product ${i+1}`} 
-                                        className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                                    />
-                                    <button 
-                                        className="absolute top-2.5 right-2.5 p-2 bg-surface-container/80 backdrop-blur-md rounded-full shadow-sm hover:bg-surface-container transition-colors text-on-surface"
-                                        onClick={() => setPreviewImage(photo.image_url)}
-                                        title="Full Screen Preview"
-                                    >
-                                        <Eye className="w-4 h-4" />
-                                    </button>
-                                    
-                                    <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-surface/90 backdrop-blur-sm p-2 rounded-xl flex items-center justify-between text-xs">
-                                        <span className="font-bold text-on-surface">
-                                            {photo.enhanced_quality ? 'AI Studio Version' : 'Original Photo'}
+                            {/* Main Photo Display */}
+                            <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container-low flex items-center justify-center shadow-inner">
+                                <img 
+                                    src={photo.image_url} 
+                                    alt={`Product ${i+1}`} 
+                                    className="w-full h-full object-contain p-2 transition-transform duration-300"
+                                />
+
+                                {/* Fullscreen preview button */}
+                                <button 
+                                    className="absolute top-2.5 right-2.5 p-2 bg-surface-container/90 backdrop-blur-md rounded-full shadow-sm hover:bg-surface-container transition-colors text-on-surface z-10"
+                                    onClick={() => setPreviewImage(photo.image_url)}
+                                    title="Full Screen Preview"
+                                >
+                                    <Eye className="w-4 h-4" />
+                                </button>
+
+                                {/* Top Left Status Tag */}
+                                <div className="absolute top-2.5 left-2.5 z-10">
+                                    {isCurrentlyEnhanced ? (
+                                        <span className="bg-emerald-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow flex items-center gap-1">
+                                            <Sparkles className="w-3 h-3" /> AI Enhanced
                                         </span>
-                                        {photo.enhanced_url && (
-                                            <button 
-                                                onClick={() => toggleEnhancedQuality(photo.id, !photo.enhanced_quality)}
-                                                className="text-primary font-bold hover:underline text-[11px]"
-                                            >
-                                                Switch to {photo.enhanced_quality ? 'Original' : 'Enhanced'}
-                                            </button>
-                                        )}
-                                    </div>
+                                    ) : (
+                                        <span className="bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow flex items-center gap-1">
+                                            <ImageIcon className="w-3 h-3" /> Original Photo
+                                        </span>
+                                    )}
                                 </div>
 
-                                {/* Quality Feedback Checklist */}
-                                <div className="flex flex-col justify-between bg-surface-container-low/60 rounded-2xl p-4 border border-outline-variant/20 text-xs">
-                                    <div>
-                                        <h5 className="font-bold text-on-surface mb-2.5 flex items-center gap-1.5">
-                                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                                            AI Quality Analysis
-                                        </h5>
-                                        
-                                        <div className="space-y-1.5">
-                                            {photo.actionable_feedback && photo.actionable_feedback.length > 0 ? (
-                                                photo.actionable_feedback.map((item, idx) => (
-                                                    <div key={idx} className={`flex items-start gap-1.5 font-medium ${item.startsWith('✓') ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                                        <span>{item}</span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <>
-                                                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                                                        <span>✓ High texture clarity</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                                                        <span>✓ E-commerce resolution (1080x1080)</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-on-surface-variant">
-                                                        <span>✓ Balanced exposure</span>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
+                                {/* Enhancement Loading Overlay */}
+                                {isThisPhotoEnhancing && (
+                                    <div className="absolute inset-0 bg-surface/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20">
+                                        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+                                        <span className="text-sm font-bold text-primary">✨ Auto Enhancing...</span>
+                                        <span className="text-xs text-on-surface-variant mt-1">Creating studio background & lighting</span>
                                     </div>
-                                    
-                                    <div className="mt-3 pt-3 border-t border-outline-variant/30 flex items-center justify-between">
-                                        <span className="text-[11px] text-on-surface-variant font-semibold">
-                                            {isEnhanced ? 'Ready for marketplace' : 'Tap AI Studio to enhance'}
-                                        </span>
+                                )}
+                            </div>
+
+                            {/* ======================================================== */}
+                            {/* TWO EXPLICIT OPTIONS FOR RURAL ARTISANS (1-CLICK & EXISTING) */}
+                            {/* ======================================================== */}
+                            <div className="bg-surface-container-low/80 p-3 rounded-2xl border border-outline-variant/30 space-y-2.5">
+                                <div className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant flex items-center justify-between">
+                                    <span>Choose Image Version:</span>
+                                    {isEnhanced && (
+                                        <span className="text-[10px] text-primary font-bold">1-Click Switch</span>
+                                    )}
+                                </div>
+
+                                {/* Option 1: Auto Enhance (1-Click) */}
+                                {!isEnhanced ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => enhancePhoto(photo.id, 'studio')}
+                                        disabled={isThisPhotoEnhancing || isLoading}
+                                        className="w-full py-3 px-4 bg-gradient-to-r from-primary to-secondary text-on-primary rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between shadow-md hover:opacity-95 active:scale-98 transition-all disabled:opacity-50"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                                            <div className="text-left">
+                                                <span className="block leading-tight font-extrabold">✨ 1-Click Auto Enhance</span>
+                                                <span className="text-[10px] text-on-primary/90 font-normal">Clean background & brighten automatically</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-[11px] font-bold bg-white/20 px-2 py-1 rounded-lg">Auto Fix</span>
+                                    </button>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {/* Select Option 1: AI Enhanced */}
                                         <button
-                                            onClick={() => openStudioEditor(photo.id)}
-                                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                                            type="button"
+                                            onClick={() => toggleEnhancedQuality(photo.id, true)}
+                                            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                                                isCurrentlyEnhanced 
+                                                    ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/30' 
+                                                    : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'
+                                            }`}
                                         >
-                                            Edit in Studio &rarr;
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-on-surface flex items-center gap-1 text-primary">
+                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                    Auto Enhanced
+                                                </span>
+                                                {isCurrentlyEnhanced && (
+                                                    <CheckCircle2 className="w-4 h-4 text-primary fill-primary/20" />
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] text-on-surface-variant leading-tight">
+                                                Studio background & clear lighting
+                                            </span>
+                                        </button>
+
+                                        {/* Select Option 2: Original Existing Photo */}
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleEnhancedQuality(photo.id, false)}
+                                            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                                                !isCurrentlyEnhanced 
+                                                    ? 'border-secondary bg-secondary/10 shadow-sm ring-2 ring-secondary/30' 
+                                                    : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-on-surface flex items-center gap-1">
+                                                    <ImageIcon className="w-3.5 h-3.5 text-on-surface-variant" />
+                                                    Original Photo
+                                                </span>
+                                                {!isCurrentlyEnhanced && (
+                                                    <CheckCircle2 className="w-4 h-4 text-secondary fill-secondary/20" />
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] text-on-surface-variant leading-tight">
+                                                Keep as taken on camera
+                                            </span>
                                         </button>
                                     </div>
+                                )}
+
+                                {/* Advanced Fine-Tuning Studio Option (Does not disturb 1-click flow) */}
+                                <div className="pt-1 flex items-center justify-between border-t border-outline-variant/20">
+                                    <span className="text-[11px] text-on-surface-variant">
+                                        Need custom background or rotation?
+                                    </span>
+                                    <button 
+                                        type="button"
+                                        onClick={() => openStudioEditor(photo.id)}
+                                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-primary/10 transition-colors"
+                                    >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span>Fine-tune Studio &rarr;</span>
+                                    </button>
                                 </div>
                             </div>
+
+                            {/* Quality Feedback checklist */}
+                            {photo.actionable_feedback && photo.actionable_feedback.length > 0 && (
+                                <div className="bg-surface-container-low/40 rounded-xl p-2.5 text-[11px] space-y-1">
+                                    {photo.actionable_feedback.slice(0, 2).map((item, idx) => (
+                                        <div key={idx} className={`flex items-start gap-1 font-medium ${item.startsWith('✓') ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                            <span>{item}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
             </div>
 
-            {/* Next Step Action */}
-            <div className="mt-4">
+            {/* Next / Skip Actions */}
+            <div className="mt-2 flex gap-3">
+                <Button 
+                    variant="outline"
+                    onClick={() => setStep(2)}
+                    className="px-5 border-outline-variant/60 text-on-surface hover:bg-surface-container"
+                >
+                    <span>{t.skip || "Skip"}</span>
+                </Button>
                 <Button 
                     onClick={() => setStep(2)}
                     disabled={photos.length === 0}
-                    fullWidth
+                    className="flex-1"
                 >
                     <span>{t.next || "Next: Voice Description"}</span>
                     <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
@@ -517,16 +583,17 @@ const Step1Photo = ({ t }: { t: any }) => {
             {/* ======================================================== */}
             {studioState && activeStudioPhoto && (
                 <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-fade-in">
-                    <div className="w-full max-w-xl max-h-[92vh] sm:rounded-3xl rounded-t-3xl bg-surface text-on-surface flex flex-col shadow-2xl overflow-hidden border border-outline-variant/30">
+                    <div className="w-full max-w-lg max-h-[92vh] sm:rounded-3xl rounded-t-3xl bg-surface text-on-surface flex flex-col shadow-2xl overflow-hidden border border-outline-variant/30">
+                        
                         {/* Studio Header */}
-                        <div className="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest">
+                        <div className="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                     <Sparkles className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base text-on-surface">AI Product Studio</h3>
-                                    <span className="text-[11px] text-on-surface-variant">E-Commerce Studio Photo Editor</span>
+                                    <h3 className="font-bold text-sm sm:text-base text-on-surface">AI Product Studio</h3>
+                                    <span className="text-[10px] sm:text-[11px] text-on-surface-variant">Fine-tune lighting, background & angles</span>
                                 </div>
                             </div>
                             
@@ -539,28 +606,49 @@ const Step1Photo = ({ t }: { t: any }) => {
                         </div>
 
                         {/* Scrollable Content */}
-                        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            
+                            {/* 1-Click Quick Auto Enhance Inside Modal */}
+                            <div className="flex items-center justify-between p-2.5 bg-primary/10 rounded-2xl border border-primary/20">
+                                <div className="flex items-center gap-2">
+                                    <Wand2 className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-bold text-on-surface">Auto Mode</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStudioState(prev => prev ? { ...prev, backgroundType: 'studio', brightness: 0, contrast: 0 } : null);
+                                        enhancePhoto(studioState.photoId, 'studio', 0, 0, studioState.rotate);
+                                    }}
+                                    disabled={studioReprocessing || enhancingPhotoId !== null}
+                                    className="px-3 py-1.5 bg-primary text-on-primary rounded-xl text-xs font-bold shadow-sm hover:bg-primary/90 flex items-center gap-1 active:scale-95"
+                                >
+                                    <Sparkles className="w-3 h-3" />
+                                    <span>Reset to 1-Click Auto</span>
+                                </button>
+                            </div>
+
                             {/* Interactive Before / After Split Slider */}
-                            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-surface-container-low border border-outline-variant/30 select-none">
+                            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-surface-container-low border border-outline-variant/30 select-none touch-none">
                                 {activeStudioPhoto.original_url && activeStudioPhoto.enhanced_url ? (
                                     <>
                                         {/* After Image (Background Layer) */}
                                         <img 
                                             src={activeStudioPhoto.enhanced_url} 
                                             alt="Enhanced" 
-                                            className="absolute inset-0 w-full h-full object-contain p-2"
+                                            className="absolute inset-0 w-full h-full object-contain p-2 pointer-events-none"
                                         />
                                         
                                         {/* Before Image (Foreground Layer with Clip Path) */}
                                         <div 
-                                            className="absolute inset-0 overflow-hidden"
+                                            className="absolute inset-0 overflow-hidden pointer-events-none"
                                             style={{ width: `${studioState.splitPosition}%` }}
                                         >
                                             <img 
                                                 src={activeStudioPhoto.original_url} 
                                                 alt="Original" 
-                                                className="absolute inset-0 w-full h-full object-contain p-2 max-w-none"
-                                                style={{ width: `${100 / (studioState.splitPosition / 100)}%` }}
+                                                className="absolute inset-0 w-full h-full object-contain p-2 max-w-none pointer-events-none"
+                                                style={{ width: `${100 / (Math.max(studioState.splitPosition, 1) / 100)}%` }}
                                             />
                                         </div>
 
@@ -575,10 +663,10 @@ const Step1Photo = ({ t }: { t: any }) => {
                                         </div>
 
                                         {/* Floating Labels */}
-                                        <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-full text-[10px] font-bold text-white uppercase tracking-wider">
+                                        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold text-white uppercase tracking-wider pointer-events-none">
                                             Original
                                         </div>
-                                        <div className="absolute top-3 right-3 px-2.5 py-1 bg-primary/90 backdrop-blur-md rounded-full text-[10px] font-bold text-white uppercase tracking-wider">
+                                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-primary/90 backdrop-blur-md rounded-lg text-[10px] font-bold text-white uppercase tracking-wider pointer-events-none">
                                             AI Studio
                                         </div>
 
@@ -611,21 +699,21 @@ const Step1Photo = ({ t }: { t: any }) => {
                             </div>
 
                             <p className="text-[11px] text-center text-on-surface-variant font-medium">
-                                Drag slider left/right to compare Before (Original) & After (Studio).
+                                Drag slider left/right to compare Original vs AI Studio.
                             </p>
 
                             {/* Background Type Selector */}
                             <div>
                                 <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-2">
-                                    Studio Background Mode
+                                    Background Style
                                 </label>
                                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                     {[
-                                        { id: 'pure_white', label: 'Pure White', icon: '⚪', desc: 'Amazon/Flipkart' },
-                                        { id: 'studio', label: 'Soft Studio', icon: '🔘', desc: 'Neutral Gray' },
-                                        { id: 'warm', label: 'Warm Craft', icon: '🪵', desc: 'Handcrafted' },
-                                        { id: 'transparent', label: 'Transparent', icon: '🔲', desc: 'PNG Cutout' },
-                                        { id: 'original', label: 'Original BG', icon: '🖼', desc: 'Enhanced Color' },
+                                        { id: 'pure_white', label: 'White', icon: '⚪' },
+                                        { id: 'studio', label: 'Studio', icon: '🔘' },
+                                        { id: 'warm', label: 'Craft Warm', icon: '🪵' },
+                                        { id: 'transparent', label: 'Cutout', icon: '🔲' },
+                                        { id: 'original', label: 'Keep BG', icon: '🖼' },
                                     ].map((bg) => (
                                         <button
                                             key={bg.id}
@@ -637,24 +725,23 @@ const Step1Photo = ({ t }: { t: any }) => {
                                             disabled={studioReprocessing || enhancingPhotoId !== null}
                                             className={`p-2.5 rounded-2xl border text-center flex flex-col items-center gap-1 transition-all ${
                                                 studioState.backgroundType === bg.id 
-                                                    ? 'border-primary bg-primary/10 shadow-sm' 
+                                                    ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20' 
                                                     : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'
                                             }`}
                                         >
                                             <span className="text-base">{bg.icon}</span>
                                             <span className="text-xs font-bold text-on-surface truncate w-full">{bg.label}</span>
-                                            <span className="text-[9px] text-on-surface-variant/80 hidden sm:block">{bg.desc}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Artisan Fine-Tuning Controls */}
-                            <div className="bg-surface-container-low/70 rounded-2xl p-4 border border-outline-variant/30 space-y-3">
+                            {/* Fine-Tuning Sliders */}
+                            <div className="bg-surface-container-low/70 rounded-2xl p-3.5 border border-outline-variant/30 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
                                         <Sliders className="w-3.5 h-3.5 text-primary" />
-                                        Artisan Adjustments
+                                        Manual Adjustments
                                     </h4>
                                     <button
                                         type="button"
@@ -677,14 +764,14 @@ const Step1Photo = ({ t }: { t: any }) => {
                                         max="50"
                                         value={studioState.brightness}
                                         onChange={(e) => setStudioState({ ...studioState, brightness: Number(e.target.value) })}
-                                        className="w-full h-1.5 bg-surface-container-high rounded-full appearance-none accent-primary cursor-pointer"
+                                        className="w-full h-2 bg-surface-container-high rounded-full appearance-none accent-primary cursor-pointer"
                                     />
                                 </div>
 
                                 {/* Contrast Slider */}
                                 <div>
                                     <div className="flex justify-between text-xs font-semibold mb-1 text-on-surface">
-                                        <span>Contrast & Color Depth</span>
+                                        <span>Contrast</span>
                                         <span className="text-primary font-mono">{studioState.contrast > 0 ? `+${studioState.contrast}` : studioState.contrast}</span>
                                     </div>
                                     <input 
@@ -693,7 +780,7 @@ const Step1Photo = ({ t }: { t: any }) => {
                                         max="50"
                                         value={studioState.contrast}
                                         onChange={(e) => setStudioState({ ...studioState, contrast: Number(e.target.value) })}
-                                        className="w-full h-1.5 bg-surface-container-high rounded-full appearance-none accent-primary cursor-pointer"
+                                        className="w-full h-2 bg-surface-container-high rounded-full appearance-none accent-primary cursor-pointer"
                                     />
                                 </div>
 
@@ -705,27 +792,27 @@ const Step1Photo = ({ t }: { t: any }) => {
                                             const nextRotate = (studioState.rotate + 90) % 360;
                                             setStudioState({ ...studioState, rotate: nextRotate });
                                         }}
-                                        className="flex-1 py-2 px-3 bg-surface-container-lowest border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors"
+                                        className="flex-1 py-2.5 px-3 bg-surface-container-lowest border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors"
                                     >
                                         <RotateCw className="w-3.5 h-3.5 text-secondary" />
-                                        Rotate {studioState.rotate > 0 ? `(${studioState.rotate}°)` : ''}
+                                        <span>Rotate {studioState.rotate > 0 ? `(${studioState.rotate}°)` : ''}</span>
                                     </button>
                                     
                                     <button
                                         type="button"
                                         onClick={handleReprocessStudio}
                                         disabled={studioReprocessing || enhancingPhotoId !== null}
-                                        className="flex-1 py-2 px-3 bg-primary text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
+                                        className="flex-1 py-2.5 px-3 bg-primary text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 active:scale-98"
                                     >
                                         {studioReprocessing || enhancingPhotoId ? (
                                             <>
                                                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                <span>Processing...</span>
+                                                <span>Applying...</span>
                                             </>
                                         ) : (
                                             <>
                                                 <RefreshCw className="w-3.5 h-3.5" />
-                                                <span>Apply Adjustments</span>
+                                                <span>Apply Changes</span>
                                             </>
                                         )}
                                     </button>
@@ -734,16 +821,17 @@ const Step1Photo = ({ t }: { t: any }) => {
                         </div>
 
                         {/* Studio Footer Actions */}
-                        <div className="p-4 border-t border-outline-variant/30 bg-surface-container-lowest flex items-center justify-between gap-3">
+                        <div className="p-3.5 border-t border-outline-variant/30 bg-surface-container-lowest flex items-center justify-between gap-2.5 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => {
                                     toggleEnhancedQuality(studioState.photoId, false);
                                     setStudioState(null);
                                 }}
-                                className="py-2.5 px-4 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-colors"
+                                className="py-2.5 px-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1"
                             >
-                                Use Original Photo
+                                <Undo2 className="w-3.5 h-3.5" />
+                                <span>Use Original</span>
                             </button>
                             
                             <button
@@ -752,10 +840,10 @@ const Step1Photo = ({ t }: { t: any }) => {
                                     toggleEnhancedQuality(studioState.photoId, true);
                                     setStudioState(null);
                                 }}
-                                className="flex-1 py-2.5 px-5 bg-primary text-on-primary rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5"
+                                className="flex-1 py-2.5 px-4 bg-primary text-on-primary rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 active:scale-98"
                             >
                                 <Check className="w-4 h-4" />
-                                <span>Save Studio Photo</span>
+                                <span>Save & Use Enhanced</span>
                             </button>
                         </div>
                     </div>
@@ -786,3 +874,4 @@ const Step1Photo = ({ t }: { t: any }) => {
 };
 
 export default Step1Photo;
+

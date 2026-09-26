@@ -20,7 +20,7 @@ def get_wishlist(current_user: Any = Depends(get_current_user), token: HTTPAutho
     items = []
     for item in res.data:
         product = item.get("products", {})
-        if not product:
+        if not product or product.get("status") != "published":
             continue
             
         images = product.get("product_images", [])

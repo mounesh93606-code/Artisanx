@@ -1,11 +1,13 @@
 import logging
 import json
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Request, Header, Response
+from fastapi.responses import HTMLResponse
 from typing import Optional, Dict, Any
 
 from auth.dependencies import get_current_user, get_optional_user, get_token
-from database import get_service_client, get_authenticated_client
+from database import get_service_client, get_authenticated_client, get_supabase_client
+from .pdf_generator import generate_invoice_pdf
 from config import settings
 from .schemas import (
     CreateCashfreeOrderRequest,
@@ -264,6 +266,134 @@ async def cashfree_webhook(
 
     return {"status": "ok", "result": "event_unhandled"}
 
+@router.get("/cashfree/return", response_class=HTMLResponse)
+async def cashfree_return_handler(
+    order_id: Optional[str] = None,
+    product_id: Optional[str] = None,
+    cf_order_id: Optional[str] = None
+):
+    """
+    HTTP landing page for Cashfree Checkout return redirect.
+    Cashfree redirects the browser here upon payment completion.
+    This page verifies the order in the background and immediately deep-links into the ArtisanX app or redirects to the product page.
+    """
+    oid = order_id or cf_order_id or ""
+    pid = product_id or ""
+
+    # Verify status in background if order_id is present
+    if oid:
+        try:
+            service_client = get_service_client()
+            orders = find_orders_by_identifier(service_client, oid)
+            if orders:
+                if not pid:
+                    pid = str(orders[0].get("product_id") or "")
+                gateway_id = orders[0].get("gateway_order_id") or oid
+                cf_status = await fetch_cashfree_order_status(gateway_id)
+                payments = cf_status.get("payments", [])
+                successful_payment = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
+                if successful_payment or cf_status.get("order_status") == "PAID":
+                    pay_id = (successful_payment.get("cf_payment_id") if successful_payment else f"pay_{gateway_id}")
+                    amount = (successful_payment.get("payment_amount") if successful_payment else float(orders[0].get("total_order_value", 0)))
+                    settle_successful_payment(
+                        service_client=service_client,
+                        gateway_order_id=gateway_id,
+                        gateway_payment_id=str(pay_id),
+                        amount_paid=float(amount)
+                    )
+        except Exception as e:
+            logger.warning(f"Background check in return handler: {e}")
+
+    app_scheme_url = f"artisanx://buyer/product/{pid}?order_id={oid}" if pid else f"artisanx://payment/status?order_id={oid}"
+    frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    web_fallback_url = f"{frontend_base}/buyer/product/{pid}?order_id={oid}" if pid else f"{frontend_base}/buyer/payment/status?order_id={oid}"
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Completed - ArtisanX</title>
+    <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #fcf8f8;
+            color: #1c1b1b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }}
+        .card {{
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 36px 24px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e7e5e4;
+        }}
+        .spinner {{
+            width: 52px;
+            height: 52px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #852221;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }}
+        @keyframes spin {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
+        }}
+        h2 {{ font-size: 20px; font-weight: 800; color: #1c1b1b; margin-bottom: 8px; }}
+        p {{ font-size: 14px; color: #78716c; margin-bottom: 24px; line-height: 1.5; }}
+        .btn {{
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #852221;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 16px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(133,34,33,0.25);
+            transition: transform 0.1s ease;
+        }}
+        .btn:active {{ transform: scale(0.98); }}
+        .btn-sec {{
+            display: block;
+            margin-top: 14px;
+            color: #78716c;
+            font-size: 13px;
+            text-decoration: underline;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="spinner"></div>
+        <h2>Payment Completed!</h2>
+        <p>Returning you to ArtisanX to view your order confirmation and invoice...</p>
+        <a id="openAppBtn" href="{app_scheme_url}" class="btn">Open in ArtisanX App</a>
+        <a href="{web_fallback_url}" class="btn-sec">Continue in Web Browser</a>
+    </div>
+
+    <script>
+        // Trigger native app deep link
+        window.location.href = "{app_scheme_url}";
+        setTimeout(function() {{
+            window.location.href = "{app_scheme_url}";
+        }}, 400);
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
+
 @router.get("/cashfree/status/{order_id}", response_model=PaymentStatusResponse)
 async def get_payment_status(
     order_id: str,
@@ -305,11 +435,13 @@ async def get_payment_status(
             order_status=order.get("status", "confirmed"),
             amount=float(order.get("total_order_value", 0)),
             currency="INR",
-            payment_method="upi",
+            payment_method=snapshot.get("payment", {}).get("payment_method") or order.get("payment_method") or "upi",
             invoice_id=invoice_meta.get("invoice_number") or order.get("invoice_id"),
             gateway_payment_id=payment_meta.get("gateway_payment_id") or order.get("gateway_payment_id"),
+            gateway_order_id=order.get("gateway_order_id") or payment_meta.get("gateway_order_id"),
             paid_at=order.get("paid_at") or payment_meta.get("paid_at"),
-            product_id=order.get("product_id")
+            product_id=order.get("product_id"),
+            product_title=snapshot.get("title") or "Handcrafted Product"
         )
 
     # If pending locally, query Cashfree API for real-time status
@@ -337,6 +469,14 @@ async def get_payment_status(
             if upd_res.data:
                 order = upd_res.data[0]
             stored_status = "paid"
+        elif cf_status.get("order_status") in ["EXPIRED", "TERMINATED", "FAILED"]:
+            stored_status = "payment_failed"
+            try:
+                service_client.table("orders").update({"payment_status": "payment_failed"}).eq("id", order["id"]).execute()
+            except Exception:
+                pass
+        elif any(p.get("payment_status") in ["FAILED", "USER_DROPPED"] for p in payments):
+            stored_status = "payment_failed"
     except Exception as e:
         logger.warning(f"Notice: Cashfree status query could not complete: {e}")
 
@@ -351,11 +491,13 @@ async def get_payment_status(
         order_status=order.get("status", "confirmed"),
         amount=float(order.get("total_order_value", 0)),
         currency="INR",
-        payment_method="upi",
+        payment_method=snapshot.get("payment", {}).get("payment_method") or order.get("payment_method") or "upi",
         invoice_id=invoice_meta.get("invoice_number") or order.get("invoice_id"),
         gateway_payment_id=payment_meta.get("gateway_payment_id") or order.get("gateway_payment_id"),
+        gateway_order_id=order.get("gateway_order_id") or payment_meta.get("gateway_order_id"),
         paid_at=order.get("paid_at") or payment_meta.get("paid_at"),
-        product_id=order.get("product_id")
+        product_id=order.get("product_id"),
+        product_title=snapshot.get("title") or "Handcrafted Product"
     )
 
 @router.get("/invoice/{order_id}", response_model=InvoiceResponse)
@@ -384,6 +526,17 @@ async def get_invoice(
     order = orders[0]
 
     # 2. Verify authorization if user authenticated
+    if not current_user and token:
+        try:
+            client = get_supabase_client()
+            user_response = client.auth.get_user(token)
+            if user_response and user_response.user:
+                res = service_client.table("users").select("*").eq("id", user_response.user.id).execute()
+                if res.data and len(res.data) > 0:
+                    current_user = res.data[0]
+        except Exception as e:
+            logger.warning(f"Could not authenticate token from query param: {e}")
+
     if current_user:
         user_id = current_user.get("id")
         if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
@@ -391,7 +544,12 @@ async def get_invoice(
 
     # 3. Check if order is paid
     payment_status = order.get("payment_status") or order.get("product_snapshot", {}).get("payment", {}).get("status")
-    if payment_status != "paid":
+    is_paid = (
+        (payment_status and str(payment_status).lower() in ["paid", "success", "completed"])
+        or bool(order.get("invoice_id"))
+        or (order.get("status") in ["confirmed", "in_production", "ready_for_dispatch", "dispatched", "delivered", "completed"])
+    )
+    if not is_paid:
         raise HTTPException(status_code=400, detail="Invoice is not yet available for an unpaid order")
 
     snapshot = order.get("product_snapshot", {})
@@ -447,4 +605,111 @@ async def get_invoice(
         gateway_payment_id=order.get("gateway_payment_id"),
         created_at=order.get("created_at") or datetime.utcnow().isoformat(),
         delivery_address=snapshot.get("delivery_address")
+    )
+
+@router.get("/invoice/{order_id}/pdf")
+async def get_invoice_pdf_route(
+    order_id: str,
+    current_user: Optional[dict] = Depends(get_optional_user),
+    token: Optional[str] = None
+):
+    """
+    Generates and downloads the official print-ready PDF invoice for a paid order.
+    Supports authenticated Bearer headers as well as ?token= query parameter
+    for seamless mobile browser and @capacitor/browser native downloads.
+    """
+    service_client = get_service_client()
+
+    # 1. Authenticate token if provided via query param
+    if not current_user and token:
+        try:
+            client = get_supabase_client()
+            user_response = client.auth.get_user(token)
+            if user_response and user_response.user:
+                res = service_client.table("users").select("*").eq("id", user_response.user.id).execute()
+                if res.data and len(res.data) > 0:
+                    current_user = res.data[0]
+        except Exception as e:
+            logger.warning(f"Could not authenticate token from query param: {e}")
+
+    # 2. Fetch order safely
+    orders = find_orders_by_identifier(
+        service_client,
+        order_id,
+        select_query="*, buyer:users!buyer_id(display_name, email, phone), artisan:users!artisan_id(display_name)"
+    )
+    if not orders:
+        orders = find_orders_by_identifier(service_client, order_id)
+
+    if not orders:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = orders[0]
+
+    # 3. Verify authorization
+    if current_user:
+        user_id = current_user.get("id")
+        if order["buyer_id"] != user_id and order["artisan_id"] != user_id and current_user.get("role") != "facilitator":
+            raise HTTPException(status_code=403, detail="Forbidden")
+    elif not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    # 4. Check if order is paid
+    payment_status = order.get("payment_status") or order.get("product_snapshot", {}).get("payment", {}).get("status")
+    is_paid = (
+        (payment_status and str(payment_status).lower() in ["paid", "success", "completed"])
+        or bool(order.get("invoice_id"))
+        or (order.get("status") in ["confirmed", "in_production", "ready_for_dispatch", "dispatched", "delivered", "completed"])
+    )
+    if not is_paid:
+        raise HTTPException(status_code=400, detail="Invoice is not yet available for an unpaid order")
+
+    # 5. Extract or build invoice data payload
+    snapshot = order.get("product_snapshot", {})
+    invoice_meta = snapshot.get("invoice", {}).get("invoice_data")
+
+    if invoice_meta:
+        inv_data = invoice_meta
+    else:
+        inv_num = order.get("invoice_id") or f"INV-{order.get('display_id')}"
+        buyer_obj = order.get("buyer") if isinstance(order.get("buyer"), dict) else {}
+        artisan_obj = order.get("artisan") if isinstance(order.get("artisan"), dict) else {}
+        inv_data = {
+            "invoice_number": inv_num,
+            "order_id": order["id"],
+            "display_id": order.get("display_id", order_id),
+            "buyer_id": order["buyer_id"],
+            "buyer_name": buyer_obj.get("display_name") or "Valued Customer",
+            "buyer_phone": buyer_obj.get("phone"),
+            "buyer_email": buyer_obj.get("email"),
+            "artisan_id": order["artisan_id"],
+            "artisan_name": artisan_obj.get("display_name") or "Verified Artisan",
+            "product_title": snapshot.get("title", "Handcrafted Artisan Product"),
+            "quantity": order.get("quantity", 1),
+            "unit_price": float(order.get("unit_price", order.get("total_order_value", 0))),
+            "subtotal": float(order.get("total_order_value", 0)),
+            "tax": 0.0,
+            "total": float(order.get("total_order_value", 0)),
+            "currency": "INR",
+            "payment_method": snapshot.get("payment", {}).get("payment_method") or "UPI",
+            "payment_status": "PAID",
+            "gateway_payment_id": snapshot.get("payment", {}).get("gateway_payment_id") or order.get("gateway_payment_id"),
+            "created_at": order.get("created_at") or datetime.utcnow().isoformat(),
+            "delivery_address": snapshot.get("delivery_address")
+        }
+
+    # 6. Generate binary PDF
+    pdf_bytes = generate_invoice_pdf(inv_data)
+    disp = inv_data.get("display_id") or inv_data.get("invoice_number", "order")
+    filename = f"Invoice-{disp}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
     )

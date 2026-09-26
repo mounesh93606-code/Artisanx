@@ -313,7 +313,24 @@
     "no_enquiries": "کوئی حالیہ استفسار نہیں",
     "next_step_desc": "زیادہ خریداروں کو راغب کرنے کے لیے اپنے دستکاری کی تصاویر اپ لوڈ کریں!",
     "greeting_prefix": "آج آپ کیا کرنا چاہیں گے؟",
-    "see_all": "سب دیکھیں"
+    "see_all": "سب دیکھیں",
+    "total_order_value": "کل آرڈر کی قیمت",
+    "products": "مصنوعات",
+    "published": "شائع شدہ",
+    "new_enquiries": "نئی پوچھ گچھ",
+    "pending_quotes": "زیر التواء قیمتیں",
+    "active_orders": "فعال آرڈرز",
+    "completed": "مکمل شدہ",
+    "messages": "پیغامات",
+    "reviews": "جائزے",
+    "analytics": "تجزیات",
+    "performance_insights": "کارکردگی کی بصیرت",
+    "completion_rate": "تکمیل کی شرح",
+    "cancellation_rate": "منسوخی کی شرح",
+    "on_time_rate": "وقت کی پابندی کی شرح",
+    "recent_activity": "حالیہ سرگرمی",
+    "no_recent_activity": "کوئی حالیہ سرگرمی نہیں ہے",
+    "order_updated": "آرڈر {{id}} اپ ڈیٹ ہو گیا"
   },
   "nav": {
     "home": "ہوم",
@@ -461,5 +478,25 @@
     "subtotal": "ذیلی کل",
     "date": "تاریخ",
     "transaction_ref": "ٹرانزیکشن حوالہ"
+  },
+  "dashboard": {
+    "total_order_value": "کل آرڈر کی قیمت",
+    "products": "مصنوعات",
+    "published": "شائع شدہ",
+    "new_enquiries": "نئی پوچھ گچھ",
+    "pending_quotes": "زیر التواء قیمتیں",
+    "active_orders": "فعال آرڈرز",
+    "completed": "مکمل شدہ",
+    "messages": "پیغامات",
+    "reviews": "جائزے",
+    "analytics": "تجزیات",
+    "performance_insights": "کارکردگی کی بصیرت",
+    "completion_rate": "تکمیل کی شرح",
+    "cancellation_rate": "منسوخی کی شرح",
+    "on_time_rate": "وقت کی پابندی کی شرح",
+    "recent_activity": "حالیہ سرگرمی",
+    "see_all": "سب دیکھیں",
+    "no_recent_activity": "کوئی حالیہ سرگرمی نہیں ہے",
+    "order_updated": "آرڈر {{id}} اپ ڈیٹ ہو گیا"
   }
 }

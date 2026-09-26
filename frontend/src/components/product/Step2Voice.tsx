@@ -17,7 +17,7 @@ const REGIONAL_LANGUAGES = [
 ];
 
 const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
-    const { voiceData, setVoiceData, setStep, saveDraft, draftId } = useProductStore();
+    const { voiceData, setVoiceData, setStep, saveDraft, draftId, catalogueData } = useProductStore();
     const [selectedLang, setSelectedLang] = useState(lang || 'en');
     const [isRecording, setIsRecording] = useState(false);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -31,8 +31,10 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
     useEffect(() => {
         if (voiceData?.translated_text) {
             setDescriptionText(voiceData.translated_text);
+        } else if (catalogueData?.full_description || catalogueData?.description) {
+            setDescriptionText(catalogueData.full_description || catalogueData.description || '');
         }
-    }, [voiceData]);
+    }, [voiceData, catalogueData]);
 
     const mediaRecorder = useRef<MediaRecorder | null>(null);
     const timerRef = useRef<number | null>(null);
@@ -368,9 +370,19 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                 </div>
             </div>
 
-            <div className="mt-4 flex gap-4">
-                <Button variant="ghost" onClick={() => setStep(1)} className="px-6">
-                    {t.back}
+            <div className="mt-4 flex gap-3">
+                <Button variant="ghost" onClick={() => setStep(1)} className="px-4">
+                    {t.back || "Back"}
+                </Button>
+                <Button 
+                    variant="outline" 
+                    onClick={async () => {
+                        await saveDraft();
+                        setStep(3);
+                    }}
+                    className="px-5 border-outline-variant/60 text-on-surface hover:bg-surface-container"
+                >
+                    {t.skip || "Skip"}
                 </Button>
                 <Button 
                     onClick={async () => { 
@@ -384,7 +396,7 @@ const Step2Voice = ({ t, lang }: { t: any, lang: string }) => {
                         setStep(3); 
                     }}
                     disabled={!descriptionText.trim()}
-                    fullWidth
+                    className="flex-1"
                 >
                     {t.next} <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
                 </Button>

@@ -1,5 +1,7 @@
-import { X, Printer, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { X, Printer, ShieldCheck, FileDown, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { downloadOrderInvoice } from '../../lib/invoiceDownload';
 
 interface InvoiceModalProps {
     isOpen: boolean;
@@ -29,11 +31,26 @@ interface InvoiceModalProps {
 
 export default function InvoiceModal({ isOpen, onClose, invoice }: InvoiceModalProps) {
     const { t } = useTranslation();
+    const [isDownloading, setIsDownloading] = useState(false);
 
     if (!isOpen || !invoice) return null;
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleDownloadPdf = async () => {
+        const orderRef = invoice.order_id || invoice.display_id || invoice.invoice_number;
+        if (!orderRef) return;
+        setIsDownloading(true);
+        try {
+            await downloadOrderInvoice(invoice, invoice.display_id || invoice.invoice_number);
+        } catch (err: any) {
+            console.error('Failed to download invoice PDF:', err);
+            alert(err?.message || 'Failed to download PDF. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const formattedDate = invoice.created_at
@@ -61,6 +78,15 @@ export default function InvoiceModal({ isOpen, onClose, invoice }: InvoiceModalP
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleDownloadPdf}
+                            disabled={isDownloading}
+                            className="p-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 transition-colors flex items-center gap-1.5 text-xs font-bold shadow-sm disabled:opacity-50"
+                            title={t('payment.download_pdf', 'Download PDF')}
+                        >
+                            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                            <span className="hidden sm:inline">{isDownloading ? t('payment.downloading', 'Saving...') : 'PDF'}</span>
+                        </button>
                         <button
                             onClick={handlePrint}
                             className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors flex items-center gap-1.5 text-xs font-bold"
@@ -186,16 +212,26 @@ export default function InvoiceModal({ isOpen, onClose, invoice }: InvoiceModalP
                 </div>
 
                 {/* Modal Actions */}
-                <div className="p-4 border-t border-stone-100 bg-stone-50 rounded-b-3xl flex gap-3">
+                <div className="p-4 border-t border-stone-100 bg-stone-50 rounded-b-3xl flex flex-wrap sm:flex-nowrap gap-2.5">
+                    <button
+                        onClick={handleDownloadPdf}
+                        disabled={isDownloading}
+                        className="flex-1 py-3 px-4 bg-primary text-on-primary rounded-full font-bold text-sm shadow-md hover:bg-primary/90 flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
+                    >
+                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                        <span>{isDownloading ? t('payment.downloading', 'Downloading PDF...') : t('payment.download_pdf', 'Download PDF Invoice')}</span>
+                    </button>
                     <button
                         onClick={handlePrint}
-                        className="flex-1 py-3 bg-primary text-on-primary rounded-full font-bold text-sm shadow-md hover:bg-primary/90 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                        className="py-3 px-4 bg-white border border-stone-200 hover:bg-stone-100 text-stone-700 rounded-full font-bold text-sm flex items-center justify-center gap-1.5 transition-colors"
+                        title={t('payment.print')}
                     >
-                        <Printer className="w-4 h-4" /> {t('payment.print')}
+                        <Printer className="w-4 h-4" />
+                        <span className="hidden sm:inline">{t('payment.print')}</span>
                     </button>
                     <button
                         onClick={onClose}
-                        className="px-6 py-3 border border-stone-200 bg-white text-stone-700 rounded-full font-bold text-sm hover:bg-stone-100 transition-colors"
+                        className="px-5 py-3 border border-stone-200 bg-white text-stone-700 rounded-full font-bold text-sm hover:bg-stone-100 transition-colors"
                     >
                         {t('payment.close')}
                     </button>

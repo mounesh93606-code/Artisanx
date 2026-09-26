@@ -112,8 +112,8 @@ def get_artisan(id: str, token: HTTPAuthorizationCredentials = Depends(security)
     u = res.data[0]
     prof = (u.get("artisan_profiles") or [{}])[0] if u.get("artisan_profiles") else {}
     
-    # Get products
-    prods = client.table("products").select("id, title, status, readiness_score, price, product_images(image_url)").eq("artisan_id", id).execute()
+    # Get products (exclude archived/deleted)
+    prods = client.table("products").select("id, title, status, readiness_score, price, product_images(image_url)").eq("artisan_id", id).neq("status", "archived").neq("status", "deleted").execute()
     
     # Get orders
     orders_res = client.table("orders").select("*, buyer:users!buyer_id(display_name)").eq("artisan_id", id).order("created_at", desc=True).execute()

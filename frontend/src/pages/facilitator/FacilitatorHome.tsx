@@ -18,23 +18,32 @@ export default function FacilitatorHome() {
     async function fetchData() {
       try {
         const [statsRes, actRes] = await Promise.all([
-          api.get(`/facilitator/stats`),
-          api.get(`/facilitator/activity`)
+          api.get(`/facilitator/stats`).catch(() => ({ data: null })),
+          api.get(`/facilitator/activity`).catch(() => ({ data: { activities: [] } }))
         ]);
         
-        setStats(statsRes.data);
-        setActivities((actRes.data.activities || []).slice(0, 3)); // 3 recent
+        if (statsRes?.data) setStats(statsRes.data);
+        if (actRes?.data?.activities) {
+          setActivities(actRes.data.activities.slice(0, 3));
+        }
       } catch (err) {
-        console.error(err);
+        console.error('FacilitatorHome fetchData error:', err);
       } finally {
         setLoading(false);
       }
     }
-    if (token) fetchData();
+    fetchData();
   }, [token]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-surface-container-lowest"><div className="animate-pulse w-8 h-8 rounded-full bg-stone-300"></div></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-container-lowest">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin w-8 h-8 rounded-full border-3 border-primary border-t-transparent"></div>
+          <span className="text-xs text-stone-500 font-medium">Loading Facilitator Portal...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -146,22 +155,22 @@ export default function FacilitatorHome() {
               activities.map((act, idx) => (
                 <div key={act.id || idx} className="flex gap-4 items-start pb-4 border-b border-outline-variant/30 last:border-0 last:pb-0">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    act.action_type === 'support' ? 'bg-blue-100 text-blue-600' :
-                    act.action_type === 'dispute_resolved' ? 'bg-red-100 text-red-600' :
-                    act.action_type === 'verification_changed' ? 'bg-green-100 text-green-600' :
+                    act?.action_type === 'support' ? 'bg-blue-100 text-blue-600' :
+                    act?.action_type === 'dispute_resolved' ? 'bg-red-100 text-red-600' :
+                    act?.action_type === 'verification_changed' ? 'bg-green-100 text-green-600' :
                     'bg-purple-100 text-purple-600'
                   }`}>
-                    {act.action_type === 'support' ? <MessageSquare className="w-5 h-5" /> : 
-                     act.action_type === 'verification_changed' ? <ShieldAlert className="w-5 h-5" /> :
+                    {act?.action_type === 'support' ? <MessageSquare className="w-5 h-5" /> : 
+                     act?.action_type === 'verification_changed' ? <ShieldAlert className="w-5 h-5" /> :
                      <Package className="w-5 h-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-stone-800 text-sm line-clamp-1">
-                      {act.action_type.replace(/_/g, ' ')}
+                      {(act?.action_type || 'activity_log').replace(/_/g, ' ')}
                     </h4>
-                    <p className="text-xs text-stone-500 line-clamp-1">{act.details || 'System update'}</p>
+                    <p className="text-xs text-stone-500 line-clamp-1">{act?.details || 'System update'}</p>
                     <div className="text-[10px] text-stone-400 mt-1">
-                      {act.created_at ? new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                      {act?.created_at ? new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                     </div>
                   </div>
                 </div>

@@ -95,7 +95,7 @@ def run_all_tests():
     pending_enquiry_id = enquiry_res.data[0]["id"] if enquiry_res.data else None
 
     unconfirmed_payload = {
-        "items": [{"product_id": prod_id, "quantity": 1}],
+        "items": [{"product_id": prod_id, "quantity": 1, "enquiry_id": pending_enquiry_id}],
         "delivery_address": {
             "full_name": "Test Buyer",
             "phone": "+919876543210",
@@ -121,7 +121,7 @@ def run_all_tests():
     log_test("7. Price Manipulation Check: Backend computes authoritative price from DB")
     # Even if client sends order, backend recalculates 2 * prod_price
     create_order_payload = {
-        "items": [{"product_id": prod_id, "quantity": 2}],
+        "items": [{"product_id": prod_id, "quantity": 2, "enquiry_id": pending_enquiry_id}],
         "delivery_address": {
             "full_name": "Test Buyer",
             "phone": "+919876543210",
@@ -273,9 +273,99 @@ def run_all_tests():
     assert fs_data["amount"] == amount
     print(f"    [PASS] Return URL status check confirms: payment_status='{fs_data['payment_status']}'")
 
+    # 15. TEST: Enquiry Consumption - Reusing previous enquiry must FAIL (HTTP 403)
+    log_test("15. Enforce Business Rule: Used/Consumed Enquiry CANNOT be reused for 2nd purchase (HTTP 403)")
+    repeat_payload_consumed = {
+        "items": [{"product_id": prod_id, "quantity": 1, "enquiry_id": pending_enquiry_id}],
+        "delivery_address": {
+            "full_name": "Test Buyer",
+            "phone": "+919876543210",
+            "address": "42 Craft Lane",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "pincode": "560001"
+        }
+    }
+    repeat_consumed_resp = client.post("/payments/cashfree/create-order", json=repeat_payload_consumed, headers=buyer_headers)
+    assert repeat_consumed_resp.status_code == 403, f"Expected 403 Forbidden for used enquiry, got {repeat_consumed_resp.status_code}: {repeat_consumed_resp.text}"
+    print("    [PASS] Reusing previously completed enquiry was correctly REJECTED with HTTP 403.")
+
+    # 16. TEST: Direct Purchase without Enquiry must FAIL (HTTP 403)
+    log_test("16. Enforce Business Rule: Purchase with NO enquiry_id must FAIL (HTTP 403)")
+    no_enquiry_payload = {
+        "items": [{"product_id": prod_id, "quantity": 1}],
+        "delivery_address": {
+            "full_name": "Test Buyer",
+            "phone": "+919876543210",
+            "address": "42 Craft Lane",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "pincode": "560001"
+        }
+    }
+    no_enquiry_resp = client.post("/payments/cashfree/create-order", json=no_enquiry_payload, headers=buyer_headers)
+    assert no_enquiry_resp.status_code == 403, f"Expected 403 for missing enquiry, got {no_enquiry_resp.status_code}"
+    print("    [PASS] Direct purchase without enquiry was correctly REJECTED with HTTP 403.")
+
+    # 17. TEST: Rejected Enquiry must FAIL (HTTP 403)
+    log_test("17. Enforce Business Rule: Rejected enquiry must FAIL (HTTP 403)")
+    rejected_enq_res = db.table("buyer_enquiries").insert({
+        "buyer_id": buyer_user["id"],
+        "artisan_id": artisan_user["id"],
+        "product_id": prod_id,
+        "quantity": 1,
+        "status": "responded",
+        "artisan_response": "cannot_fulfil"
+    }).execute()
+    rejected_enquiry_id = rejected_enq_res.data[0]["id"]
+
+    rejected_payload = {
+        "items": [{"product_id": prod_id, "quantity": 1, "enquiry_id": rejected_enquiry_id}],
+        "delivery_address": {
+            "full_name": "Test Buyer",
+            "phone": "+919876543210",
+            "address": "42 Craft Lane",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "pincode": "560001"
+        }
+    }
+    rejected_resp = client.post("/payments/cashfree/create-order", json=rejected_payload, headers=buyer_headers)
+    assert rejected_resp.status_code == 403, f"Expected 403 for rejected enquiry, got {rejected_resp.status_code}"
+    print("    [PASS] Rejected enquiry was correctly REJECTED with HTTP 403.")
+
+    # 18. TEST: Repeat Purchase with Fresh Approved Enquiry must SUCCEED
+    log_test("18. Repeat Purchase Flow: New Enquiry -> Artisan Approval -> Cashfree Payment -> SUCCEEDS")
+    fresh_enquiry_res = db.table("buyer_enquiries").insert({
+        "buyer_id": buyer_user["id"],
+        "artisan_id": artisan_user["id"],
+        "product_id": prod_id,
+        "quantity": 1,
+        "status": "accepted",
+        "artisan_response": "interested"
+    }).execute()
+    fresh_enquiry_id = fresh_enquiry_res.data[0]["id"]
+
+    second_purchase_payload = {
+        "items": [{"product_id": prod_id, "quantity": 1, "enquiry_id": fresh_enquiry_id}],
+        "delivery_address": {
+            "full_name": "Test Buyer",
+            "phone": "+919876543210",
+            "address": "42 Craft Lane",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "pincode": "560001"
+        }
+    }
+    second_order_resp = client.post("/payments/cashfree/create-order", json=second_purchase_payload, headers=buyer_headers)
+    assert second_order_resp.status_code == 200, f"Second purchase with fresh enquiry failed: {second_order_resp.text}"
+    second_order_data = second_order_resp.json()
+    print(f"    [PASS] Second purchase order created successfully: {second_order_data['order_id']} for Rs. {second_order_data['amount']}")
+
     print("\n=======================================================")
-    print("ALL 14 ACCEPTANCE TEST STEPS PASSED SUCCESSFULLY! [PASS]")
+    print("ALL 18 ACCEPTANCE & REPEAT PURCHASE TESTS PASSED! [PASS]")
     print("=======================================================\n")
 
 if __name__ == "__main__":
     run_all_tests()
+

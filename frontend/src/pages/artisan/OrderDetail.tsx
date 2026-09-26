@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { ArrowLeft, Package, Settings, Truck, Navigation, XCircle, CheckCircle, AlertTriangle, MessageCircle, ShieldAlert, FileText } from 'lucide-react';
+import { ArrowLeft, Package, Settings, Truck, Navigation, XCircle, CheckCircle, AlertTriangle, MessageCircle, ShieldAlert, FileText, FileDown, Loader2 } from 'lucide-react';
 import { useOrderStore } from '../../stores/orderStore';
 import api from '../../lib/api';
 import InvoiceModal from '../../components/buyer/InvoiceModal';
+import { downloadOrderInvoice } from '../../lib/invoiceDownload';
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,20 @@ export default function OrderDetail() {
   const [disputeExplanation, setDisputeExplanation] = useState('');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!id) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadOrderInvoice(id, currentOrder?.display_id);
+    } catch (err: any) {
+      console.error("Failed to download invoice:", err);
+      alert(err?.response?.data?.detail || "Failed to download invoice PDF.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const handleViewInvoice = async () => {
     try {
@@ -140,11 +155,12 @@ export default function OrderDetail() {
   const o = currentOrder;
   const isCancelled = o.status === 'cancelled' || o.status === 'cancellation_requested';
   
-  // Artisan can advance state forward: confirmed -> in_production -> ready_for_dispatch -> dispatched
+  // Artisan can advance state forward: confirmed -> in_production -> ready_for_dispatch -> dispatched -> delivered
   const getNextActions = () => {
     if (o.status === 'confirmed') return [{ label: 'Start Production', status: 'in_production', icon: Settings, color: 'bg-purple-600' }];
     if (o.status === 'in_production') return [{ label: 'Mark Ready for Dispatch', status: 'ready_for_dispatch', icon: Package, color: 'bg-orange-600' }];
     if (o.status === 'ready_for_dispatch') return [{ label: 'Mark Dispatched', status: 'dispatched', icon: Truck, color: 'bg-indigo-600' }];
+    if (o.status === 'dispatched') return [{ label: 'Mark Delivered', status: 'delivered', icon: CheckCircle, color: 'bg-emerald-600' }];
     return [];
   };
   
@@ -247,12 +263,33 @@ export default function OrderDetail() {
               </span>
             </div>
           </div>
-          <button
-            onClick={handleViewInvoice}
-            className="w-full mt-3 py-2.5 bg-surface text-stone-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-outline-variant hover:bg-stone-50 transition-colors shadow-sm"
-          >
-            <FileText className="w-4 h-4 text-primary" /> View Order Invoice
-          </button>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="flex-1 py-2.5 bg-primary text-on-primary rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-all shadow-sm active:scale-95 disabled:opacity-60"
+            >
+              {isDownloadingPdf ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Downloading...</span>
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>Download Invoice</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleViewInvoice}
+              className="py-2.5 px-3 bg-surface text-stone-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-outline-variant hover:bg-stone-50 transition-colors shadow-sm"
+              title="View Invoice Modal"
+            >
+              <FileText className="w-3.5 h-3.5 text-stone-600" />
+              <span>Preview</span>
+            </button>
+          </div>
         </div>
 
         {/* Timeline from History */}

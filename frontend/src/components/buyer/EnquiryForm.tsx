@@ -104,10 +104,19 @@ export default function EnquiryForm({ productId, moq, onClose }: EnquiryFormProp
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-surface rounded-t-3xl sm:rounded-2xl shadow-xl w-[calc(100%-24px)] max-w-[406px] overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-6 border-b border-outline-variant/30 bg-surface-container-lowest">
-          <h2 className="text-xl font-bold text-on-surface">{t('enquiry.form_title') || 'Send Enquiry'}</h2>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
-            <X className="w-6 h-6" />
+        <div className="flex justify-between items-center p-5 border-b border-outline-variant/30 bg-surface-container-lowest">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider mb-1">
+              <span>Artisan Enquiry</span>
+            </div>
+            <h2 className="text-lg font-bold text-on-surface">{t('enquiry.form_title', { defaultValue: 'Send Purchase Enquiry' })}</h2>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-stone-100 text-on-surface-variant hover:text-on-surface transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
         
@@ -126,12 +135,11 @@ export default function EnquiryForm({ productId, moq, onClose }: EnquiryFormProp
               <input 
                 type="number" 
                 required 
-                min={moq > 0 ? moq : 1}
+                min={1}
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full p-3 border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-surface-container-lowest text-on-surface"
+                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                className="w-full p-3 border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-surface-container-lowest text-on-surface font-bold"
               />
-              {moq > 1 && <p className="text-xs text-on-surface-variant mt-1">Minimum order quantity is {moq}</p>}
             </div>
 
             {variants.length > 0 && (

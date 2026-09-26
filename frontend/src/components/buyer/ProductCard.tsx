@@ -4,8 +4,10 @@ import { MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function ProductCard({ product }: { product: any }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [imgError, setImgError] = useState(false);
+  const currentLang = i18n.language || 'en';
+  const displayTitle = product.translations?.[currentLang]?.title || product.title || 'Untitled Product';
 
   return (
     <Link to={`/buyer/product/${product.id}`} className="group h-full flex flex-col">
@@ -14,7 +16,7 @@ export default function ProductCard({ product }: { product: any }) {
           {product.main_image && !imgError ? (
             <img 
               src={product.main_image} 
-              alt={product.title || 'Product'} 
+              alt={displayTitle} 
               className="w-full h-full object-cover transition-transform group-hover:scale-105" 
               onError={() => setImgError(true)}
             />
@@ -23,7 +25,7 @@ export default function ProductCard({ product }: { product: any }) {
           )}
         </div>
         <div className="p-4 flex flex-col flex-1">
-          <h3 className="font-bold text-stone-800 line-clamp-2 min-h-[40px] leading-tight mb-2">{product.title || 'Untitled Product'}</h3>
+          <h3 className="font-bold text-stone-800 line-clamp-2 min-h-[40px] leading-tight mb-2">{displayTitle}</h3>
           <div className="flex items-center justify-between mb-3 mt-auto">
             <span className="font-extrabold text-lg text-primary">₹{Number(product.price || 0).toLocaleString()}</span>
           </div>

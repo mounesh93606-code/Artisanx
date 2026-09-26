@@ -313,7 +313,24 @@
     "no_enquiries": "कोणतीही अलीकडील चौकशी नाही",
     "next_step_desc": "अधिक खरेदीदारांना आकर्षित करण्यासाठी आपल्या हस्तकलेचे फोटो अपलोड करा!",
     "greeting_prefix": "आज आपण काय करू इच्छिता?",
-    "see_all": "सर्व पहा"
+    "see_all": "सर्व पहा",
+    "total_order_value": "एकूण ऑर्डर मूल्य",
+    "products": "उत्पादने",
+    "published": "प्रकाशित",
+    "new_enquiries": "नवीन चौकशी",
+    "pending_quotes": "प्रलंबित कोटेशन्स",
+    "active_orders": "सक्रिय ऑर्डर्स",
+    "completed": "पूर्ण",
+    "messages": "संदेश",
+    "reviews": "पुनरावलोकने",
+    "analytics": "विश्लेषण",
+    "performance_insights": "कामगिरी अंतर्दृष्टी",
+    "completion_rate": "पूर्णता दर",
+    "cancellation_rate": "रद्द करण्याचा दर",
+    "on_time_rate": "वेळेवर दर",
+    "recent_activity": "अलीकडील क्रियाकलाप",
+    "no_recent_activity": "कोणतीही अलीकडील क्रियाकलाप नाही",
+    "order_updated": "ऑर्डर {{id}} अद्यतनित केली"
   },
   "nav": {
     "home": "होम",
@@ -461,5 +478,25 @@
     "subtotal": "उपएकूण",
     "date": "तारीख",
     "transaction_ref": "व्यवहार संदर्भ"
+  },
+  "dashboard": {
+    "total_order_value": "एकूण ऑर्डर मूल्य",
+    "products": "उत्पादने",
+    "published": "प्रकाशित",
+    "new_enquiries": "नवीन चौकशी",
+    "pending_quotes": "प्रलंबित कोटेशन्स",
+    "active_orders": "सक्रिय ऑर्डर्स",
+    "completed": "पूर्ण",
+    "messages": "संदेश",
+    "reviews": "पुनरावलोकने",
+    "analytics": "विश्लेषण",
+    "performance_insights": "कामगिरी अंतर्दृष्टी",
+    "completion_rate": "पूर्णता दर",
+    "cancellation_rate": "रद्द करण्याचा दर",
+    "on_time_rate": "वेळेवर दर",
+    "recent_activity": "अलीकडील क्रियाकलाप",
+    "see_all": "सर्व पहा",
+    "no_recent_activity": "कोणतीही अलीकडील क्रियाकलाप नाही",
+    "order_updated": "ऑर्डर {{id}} अद्यतनित केली"
   }
 }

@@ -42,47 +42,60 @@ def generate_invoice_number() -> str:
 
 def verify_enquiry_confirmation(service_client, buyer_id: str, product_id: str, enquiry_id: Optional[str] = None) -> Dict[str, Any]:
     """
-    Strictly verifies that an artisan has confirmed the enquiry for this buyer & product.
-    If enquiry is pending, rejected, or missing, an HTTPException is raised.
+    Strictly verifies that a valid, active, approved enquiry exists for this specific purchase attempt.
+    EVERY SINGLE BUY ATTEMPT requires an approved enquiry that has NOT been previously consumed/ordered.
     """
-    if enquiry_id:
-        enq_res = service_client.table("buyer_enquiries").select("*").eq("id", enquiry_id).execute()
-        if not enq_res.data:
-            raise HTTPException(status_code=404, detail="Referenced enquiry not found")
-        enquiry = enq_res.data[0]
-        if enquiry.get("buyer_id") != buyer_id or enquiry.get("product_id") != product_id:
-            raise HTTPException(status_code=403, detail="Invalid enquiry reference for this product and buyer")
-        
-        # Check rejection
-        if enquiry.get("status") == "rejected" or enquiry.get("artisan_response") in ["cannot_fulfil", "rejected"]:
-            raise HTTPException(status_code=400, detail="Artisan did not confirm this enquiry request.")
-        
-        # Check pending vs confirmed
-        is_confirmed = (
-            (enquiry.get("status") in ["accepted", "responded"] and enquiry.get("artisan_response") in ["accepted", "interested"]) 
-            or enquiry.get("status") in ["quote_sent", "accepted"]
+    if not enquiry_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="An approved enquiry is required before purchasing this product. Please send an enquiry to the artisan."
         )
-        if not is_confirmed:
-            raise HTTPException(status_code=403, detail="Payment unavailable: Enquiry is waiting for artisan confirmation.")
-        return enquiry
-    else:
-        # Check if buyer has any confirmed enquiry for this product
-        check_enq = service_client.table("buyer_enquiries").select("*").eq("buyer_id", buyer_id).eq("product_id", product_id).execute()
-        confirmed = [
-            e for e in (check_enq.data or []) 
-            if ((e.get("status") in ["accepted", "responded"] and e.get("artisan_response") in ["accepted", "interested"]) 
-                or e.get("status") in ["quote_sent", "accepted"])
-        ]
-        if not confirmed:
+
+    enq_res = service_client.table("buyer_enquiries").select("*").eq("id", enquiry_id).execute()
+    if not enq_res.data:
+        raise HTTPException(status_code=404, detail="Referenced enquiry not found")
+    enquiry = enq_res.data[0]
+    
+    if enquiry.get("buyer_id") != buyer_id or enquiry.get("product_id") != product_id:
+        raise HTTPException(status_code=403, detail="Invalid enquiry reference for this product and buyer")
+    
+    # 1. Check if enquiry was already consumed by a prior completed purchase
+    if enquiry.get("status") in ["ordered", "completed", "used", "closed", "cancelled"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="This enquiry has already been used for a previous purchase. A new enquiry is required for every purchase."
+        )
+
+    # 2. Check if an existing confirmed order already references this enquiry_id
+    try:
+        ord_check = service_client.table("orders").select("id").eq("enquiry_id", enquiry_id).execute()
+        if ord_check.data and len(ord_check.data) > 0:
             raise HTTPException(
                 status_code=403, 
-                detail="Payment cannot proceed: This product requires an artisan-confirmed enquiry before checkout."
+                detail="This enquiry has already been consumed by an order. A new enquiry is required for every purchase."
             )
-        return confirmed[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Order enquiry reference check notice: {e}")
+
+    # 3. Check rejection
+    if enquiry.get("status") == "rejected" or enquiry.get("artisan_response") in ["cannot_fulfil", "rejected"]:
+        raise HTTPException(status_code=403, detail="Your enquiry was not approved by the artisan.")
+    
+    # 4. Check approval / confirmation
+    is_confirmed = (
+        (enquiry.get("status") in ["accepted", "responded"] and enquiry.get("artisan_response") in ["accepted", "interested"]) 
+        or enquiry.get("status") in ["quote_sent", "accepted"]
+    )
+    if not is_confirmed:
+        raise HTTPException(status_code=403, detail="Payment unavailable: Enquiry is waiting for artisan confirmation.")
+        
+    return enquiry
 
 def calculate_and_validate_items(service_client, buyer_id: str, items: List[Any]) -> Tuple[List[Dict[str, Any]], float]:
     """
-    Validates items, checks stock, enforces enquiry confirmation,
+    Validates items, checks stock, enforces mandatory approved single-use enquiry,
     and calculates true unit price and totals server-side from database.
     """
     validated_items = []
@@ -94,7 +107,12 @@ def calculate_and_validate_items(service_client, buyer_id: str, items: List[Any]
         if qty <= 0:
             raise HTTPException(status_code=400, detail="Item quantity must be greater than 0")
 
-        # 1. Enforce enquiry confirmation rule
+        # 1. Mandatory enquiry validation (every single purchase attempt requires an approved enquiry)
+        if not item.enquiry_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="An approved enquiry is required before purchasing this product. Please send an enquiry to the artisan."
+            )
         enquiry = verify_enquiry_confirmation(service_client, buyer_id, prod_id, item.enquiry_id)
         enquiry_id = enquiry["id"]
 
@@ -107,12 +125,7 @@ def calculate_and_validate_items(service_client, buyer_id: str, items: List[Any]
         if product.get("status") and product.get("status") not in ["published", "active"]:
             raise HTTPException(status_code=400, detail=f"Product '{product.get('title')}' is currently unavailable")
 
-        # 3. Check MOQ
-        moq = product.get("moq") or 1
-        if qty < moq:
-            raise HTTPException(status_code=400, detail=f"Minimum order quantity for '{product.get('title')}' is {moq}")
-
-        # 4. Check Stock
+        # 3. Check stock
         if product.get("stock_quantity") is not None and not product.get("is_made_to_order"):
             if qty > product["stock_quantity"]:
                 raise HTTPException(
@@ -196,8 +209,7 @@ async def create_cashfree_order_session(
         },
         "order_meta": {
             "return_url": return_url,
-            "notify_url": notify_url,
-            "payment_methods": "upi"
+            "notify_url": notify_url
         },
         "order_note": order_note[:100]
     }
@@ -554,6 +566,18 @@ def settle_successful_payment(
                 service_client.table("products").update({"stock_quantity": new_stock}).eq("id", prod_id).execute()
         except Exception as e:
             logger.error(f"Failed to deduct stock for product {order.get('product_id')}: {e}")
+
+        # Consume associated enquiry: mark status as 'closed' so it can NEVER be reused for another purchase
+        enq_id = order.get("enquiry_id")
+        if enq_id:
+            try:
+                service_client.table("buyer_enquiries").update({
+                    "status": "closed",
+                    "responded_at": now_iso
+                }).eq("id", enq_id).execute()
+                logger.info(f"Marked enquiry {enq_id} as 'closed' (consumed for order {display_id}).")
+            except Exception as e:
+                logger.warning(f"Notice: Failed to update enquiry status to closed: {e}")
 
         # Send Notifications ONLY after verified payment
         try:

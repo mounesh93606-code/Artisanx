@@ -25,11 +25,11 @@ def get_artisan_dashboard(current_user: dict = Depends(get_current_user), token:
         artisan_id = current_user["id"]
 
         
-        # Total and Published Products
-        prod_res = client.table("products").select("status").eq("artisan_id", artisan_id).execute()
+        # Total and Published Products (exclude archived/deleted products)
+        prod_res = client.table("products").select("status").eq("artisan_id", artisan_id).neq("status", "archived").neq("status", "deleted").execute()
         products = prod_res.data or []
         total_products = len(products)
-        published_products = sum(1 for p in products if p["status"] == "published")
+        published_products = sum(1 for p in products if p.get("status") == "published")
         
         # New Enquiries
         enq_res = client.table("buyer_enquiries").select("id").eq("artisan_id", artisan_id).eq("status", "new").execute()

@@ -10,6 +10,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def route_send_otp(req: schemas.SendOTPRequest):
     return service.send_otp(req.phone)
 
+@router.post("/resend-otp")
+def route_resend_otp(req: schemas.SendOTPRequest):
+    return service.resend_otp(req.phone)
+
 @router.post("/verify-otp")
 def route_verify_otp(req: schemas.VerifyOTPRequest):
     return service.verify_otp(req.phone, req.otp)
@@ -42,3 +46,4 @@ def route_set_role(req: schemas.SetRoleRequest, current_user: Any = Depends(get_
 @router.post("/refresh")
 def route_refresh(req: schemas.RefreshTokenRequest):
     return service.refresh_session(req.refresh_token)
+
