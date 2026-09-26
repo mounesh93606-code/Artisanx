@@ -83,6 +83,7 @@ export default function BuyerProductPage() {
     const [showInvoice, setShowInvoice] = useState(false);
     const [invoiceData, setInvoiceData] = useState<any>(null);
     const [pollCount, setPollCount] = useState(0);
+    const [completedPaymentOrderId, setCompletedPaymentOrderId] = useState<string | null>(null);
 
     const checkPaymentStatus = async (oid: string, retryCount = 0) => {
         if (!oid) return;
@@ -134,18 +135,32 @@ export default function BuyerProductPage() {
 
     useEffect(() => {
         if (orderIdParam) {
+            setCompletedPaymentOrderId(orderIdParam);
+            sessionStorage.setItem('just_paid_order', orderIdParam);
             checkPaymentStatus(orderIdParam);
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('order_id');
+            newParams.delete('cf_order_id');
+            setSearchParams(newParams, { replace: true });
         }
     }, [orderIdParam]);
 
     const closePaymentPopup = () => {
         setShowPaymentPopup(false);
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete('order_id');
-        newParams.delete('cf_order_id');
-        setSearchParams(newParams, { replace: true });
-        // Restore default enquiry & state
         fetchBuyerEnquiry();
+    };
+
+    const handleBack = () => {
+        if (showPaymentPopup) {
+            closePaymentPopup();
+            return;
+        }
+        if (completedPaymentOrderId || sessionStorage.getItem('just_paid_order')) {
+            sessionStorage.removeItem('just_paid_order');
+            navigate('/buyer/catalogue', { replace: true });
+            return;
+        }
+        navigate(-1);
     };
 
     const fetchBuyerEnquiry = async () => {
@@ -289,7 +304,7 @@ export default function BuyerProductPage() {
             {/* Top Nav */}
             <div className="absolute top-4 left-4 right-4 z-10 flex justify-between pt-safe">
                 <button 
-                    onClick={() => navigate(-1)} 
+                    onClick={handleBack} 
                     className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-stone-800 shadow-sm active:scale-95 transition-all"
                     aria-label="Back"
                 >
@@ -796,6 +811,7 @@ export default function BuyerProductPage() {
                     <div className="bg-surface rounded-3xl shadow-2xl w-full max-w-md p-6 text-center relative border border-outline-variant animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
                         <button 
                             onClick={closePaymentPopup} 
+                            data-back-dismiss="true"
                             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:text-stone-800 transition-colors"
                             aria-label="Close"
                         >
@@ -873,6 +889,7 @@ export default function BuyerProductPage() {
 
                                     <button 
                                         onClick={closePaymentPopup}
+                                        data-back-dismiss="true"
                                         className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-2xl transition-colors text-xs flex items-center justify-center gap-1.5"
                                     >
                                         Continue

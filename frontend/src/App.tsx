@@ -97,6 +97,20 @@ const BackButtonHandler: React.FC = () => {
 
     const setupListener = async () => {
       listenerHandle = await CapApp.addListener('backButton', () => {
+        // If an open modal/popup requested dismiss on back button
+        const dismissBtn = document.querySelector('[data-back-dismiss="true"]') as HTMLElement | null;
+        if (dismissBtn) {
+          dismissBtn.click();
+          return;
+        }
+
+        // If the buyer just completed an order and is viewing the product, take them to catalogue/products
+        if (location.pathname.startsWith('/buyer/product') && (sessionStorage.getItem('just_paid_order') || location.search.includes('order_id'))) {
+          sessionStorage.removeItem('just_paid_order');
+          navigate('/buyer/catalogue', { replace: true });
+          return;
+        }
+
         const rootPaths = ['/login', '/artisan', '/buyer', '/facilitator', '/', '/splash', '/select-language'];
         const isRoot = rootPaths.includes(location.pathname);
 
@@ -148,9 +162,10 @@ const AppUrlListener: React.FC = () => {
           const orderId = parsed.searchParams.get('order_id') || '';
           const productId = parsed.searchParams.get('product_id') || '';
           if (productId) {
-            navigate(`/buyer/product/${productId}?order_id=${orderId}`);
+            sessionStorage.setItem('just_paid_order', orderId);
+            navigate(`/buyer/product/${productId}?order_id=${orderId}`, { replace: true });
           } else {
-            navigate(`/buyer/payment/status${search}`);
+            navigate(`/buyer/payment/status${search}`, { replace: true });
           }
         } else if (path.startsWith('/product/') || path.startsWith('/buyer/') || path.startsWith('/artisan/')) {
           navigate(`${path}${search}`);

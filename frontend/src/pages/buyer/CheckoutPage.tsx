@@ -122,7 +122,8 @@ export default function CheckoutPage() {
                     try {
                         const browserListener = await Browser.addListener('browserFinished', () => {
                             browserListener.remove();
-                            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`);
+                            sessionStorage.setItem('just_paid_order', order_id);
+                            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`, { replace: true });
                         });
                         await Browser.open({ url: effectiveCheckoutUrl });
                         return;
@@ -152,7 +153,8 @@ export default function CheckoutPage() {
 
             // Fallback (COD / simulated order)
             if (isDirect) setDirectItem(null); else clearCart();
-            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`);
+            sessionStorage.setItem('just_paid_order', order_id);
+            navigate(`/buyer/product/${firstProductId}?order_id=${order_id}`, { replace: true });
 
         } catch (err: any) {
             console.error('Order placement failed', err);
