@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Share2, MessageCircle, MapPin, CheckCircle, Package, ShieldCheck, Clock, Settings, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
+
 interface ProductImage {
   image_url: string;
   is_main: boolean;
@@ -63,20 +66,41 @@ export default function ProductPassport({ passportData, qrCodeUrl: _qrCodeUrl, s
   const images = passportData.images?.length > 0 ? passportData.images : [{ image_url: 'https://via.placeholder.com/400x400?text=No+Image', is_main: true }];
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
+    const shareTitle = passportData.title || 'Product Passport';
+    const shareMessage = `Check out ${passportData.title} by ${passportData.artisan_name} - Verified Digital Craft Passport:\n${cleanShareUrl}`;
+
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({
+          title: shareTitle,
+          text: shareMessage,
+          url: cleanShareUrl,
+          dialogTitle: 'Share Product Passport',
+        });
+        return;
+      }
+
+      if (navigator.share) {
         await navigator.share({
-          title: passportData.title,
-          text: `Check out ${passportData.title} by ${passportData.artisan_name} - Verified Digital Craft Passport`,
+          title: shareTitle,
+          text: shareMessage,
           url: cleanShareUrl,
         });
-      } catch (err) {
-        console.error('Share failed', err);
+      } else {
+        await navigator.clipboard.writeText(cleanShareUrl);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
       }
-    } else {
-      navigator.clipboard.writeText(cleanShareUrl);
-      setShareSuccess(true);
-      setTimeout(() => setShareSuccess(false), 2000);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(cleanShareUrl);
+          setShareSuccess(true);
+          setTimeout(() => setShareSuccess(false), 2000);
+        } catch {
+          // ignore
+        }
+      }
     }
   };
 

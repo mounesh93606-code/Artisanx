@@ -89,7 +89,9 @@ def get_passport(product_id: str) -> dict:
         res = client.table("product_passports").select("*").eq("product_id", product_id).execute()
         if not res.data:
             raise HTTPException(status_code=404, detail="Passport not found")
-        return res.data[0]
+        data = res.data[0]
+        data["shareable_url"] = f"https://artisanx-frontend.vercel.app/product/{product_id}"
+        return data
     except HTTPException:
         raise
     except Exception as e:

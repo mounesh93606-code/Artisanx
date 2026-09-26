@@ -433,6 +433,8 @@ def get_catalogue_detail(product_id: str):
     passport_data = None
     try:
         passport_data = get_passport(product_id)
+        if passport_data:
+            passport_data["shareable_url"] = f"https://artisanx-frontend.vercel.app/product/{product_id}"
     except Exception:
         pass
         
